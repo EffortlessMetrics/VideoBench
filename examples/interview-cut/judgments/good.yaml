@@ -1,0 +1,23 @@
+criteria:
+  - criterion_id: brief-adherence
+    verdict: accept
+    score: 4.5
+    confidence: 0.95
+    reason_codes: []
+    explanation: The selected material supports the stated argument and preserves the editable-project proposition.
+    candidate_time_ranges: ["00:00-01:01.5"]
+    source_time_ranges: ["00:00:01-00:00:43"]
+    evidence_paths: [final-proxy.txt, timeline.json]
+  - criterion_id: editorial-coherence
+    verdict: accept
+    score: 4.2
+    confidence: 0.9
+    reason_codes: []
+    explanation: The synthetic state describes a purposeful progression with supporting b-roll and a clear close.
+    candidate_time_ranges: ["00:00-01:01.5"]
+    source_time_ranges: ["00:00:01-00:00:43"]
+    evidence_paths: [final-proxy.txt, timeline.json]
+panel_disagreement: {}
+raw_judgments:
+  - source: frozen_demo_anchor
+    note: Controlled instrument-validation judgment, not a professional editor rating.

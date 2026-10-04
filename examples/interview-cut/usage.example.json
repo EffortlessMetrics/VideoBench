@@ -1,0 +1,24 @@
+{
+  "input_tokens": 1000,
+  "cached_input_tokens": 0,
+  "cache_write_tokens": 0,
+  "reasoning_tokens": 300,
+  "output_tokens": 200,
+  "image_units": 0.0,
+  "video_units": 0.0,
+  "model_calls": 1,
+  "tool_calls": 4,
+  "compaction_events": 0,
+  "model_retries": 0,
+  "transport_retries": 0,
+  "wall_seconds": 0.0,
+  "active_agent_seconds": 0.0,
+  "resolve_processing_seconds": 0.0,
+  "render_seconds": 0.0,
+  "human_interventions": 0,
+  "human_seconds": 0.0,
+  "actual_candidate_cost_usd": 0.01,
+  "metadata": {
+    "note": "Example shape only; real adapters should preserve provider receipts."
+  }
+}

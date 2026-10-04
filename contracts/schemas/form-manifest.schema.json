@@ -1,0 +1,67 @@
+{
+  "$defs": {
+    "Instrument": {
+      "enum": [
+        "surface_conformance",
+        "execution_core",
+        "editorial_core",
+        "project_field",
+        "revision_recovery",
+        "judge_qualification"
+      ],
+      "title": "Instrument",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "compiler_version": {
+      "title": "Compiler Version",
+      "type": "string"
+    },
+    "execution_pack_sha256": {
+      "title": "Execution Pack Sha256",
+      "type": "string"
+    },
+    "family_id": {
+      "title": "Family Id",
+      "type": "string"
+    },
+    "form_id": {
+      "title": "Form Id",
+      "type": "string"
+    },
+    "instrument": {
+      "$ref": "#/$defs/Instrument"
+    },
+    "judge_pack_sha256": {
+      "title": "Judge Pack Sha256",
+      "type": "string"
+    },
+    "source_sha256": {
+      "title": "Source Sha256",
+      "type": "string"
+    },
+    "task_id": {
+      "title": "Task Id",
+      "type": "string"
+    },
+    "verifier_pack_sha256": {
+      "title": "Verifier Pack Sha256",
+      "type": "string"
+    }
+  },
+  "required": [
+    "task_id",
+    "family_id",
+    "form_id",
+    "instrument",
+    "source_sha256",
+    "execution_pack_sha256",
+    "verifier_pack_sha256",
+    "judge_pack_sha256",
+    "compiler_version"
+  ],
+  "title": "FormManifest",
+  "type": "object"
+}

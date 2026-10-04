@@ -1,0 +1,229 @@
+task_id: interview-cut-demo-v1
+family_id: interview-compression
+form_id: public-development-001
+title: Produce an editable interview-led proof cut
+instrument: project_field
+brief: >-
+  Create a 45–75 second 16:9 interview-led edit from the supplied transcript and shot
+  list. Use at least two interview statements, integrate relevant b-roll, add the supplied
+  lower third, include captions, and end on “Measure accepted work.” Preserve an editable
+  project state with all supplied source media online.
+assets:
+  - asset_id: transcript
+    path: assets/interview-transcript.txt
+    media_type: transcript
+    role: source transcript
+    sha256: 3257d6f6ea79ee78587467ba40cdc16e83a0d4f27c83cac21ca65da2d4a9fbb3
+    public_eligible: true
+  - asset_id: shot-list
+    path: assets/shot-list.json
+    media_type: data
+    role: source media inventory
+    sha256: d25a151c079165886b53d617cb106acc2e250cf897b998b41de7d0245553e543
+    public_eligible: true
+  - asset_id: lower-third
+    path: assets/lower-third.txt
+    media_type: data
+    role: approved on-screen identity
+    sha256: 2e1ae09e4fa58d2a43ffe97dae5be5865ba732e77b0c015dc549623e3cdfac26
+    public_eligible: true
+output_contract:
+  deliverables:
+    - deliverable_id: project-state
+      path: timeline.json
+      media_type: project
+      required: true
+      editable: true
+      description: Canonical project and timeline state for the synthetic vertical slice.
+    - deliverable_id: final-proxy
+      path: final-proxy.txt
+      media_type: video
+      required: true
+      editable: false
+      description: Synthetic stand-in for a decoded final render.
+  requirements:
+    - Duration is between 45 and 75 seconds.
+    - Output aspect ratio is 16:9.
+    - Use at least two interview statements and at least one relevant b-roll cue.
+    - Use the supplied lower-third text exactly.
+    - Include captions and the closing card “Measure accepted work.”
+    - Preserve an editable project with source media online.
+  protected_invariants: []
+  prohibited_shortcuts:
+    - Do not replace the editable project with a flattened render-only artifact.
+public_constraints:
+  - This form is synthetic instrument-validation evidence, not a professional craft claim.
+hidden_obligations:
+  - Reject a claimed editable result when its source references are offline.
+  - Treat a render-only substitute as a fatal contract failure.
+objective_checks:
+  - check_id: timeline-present
+    check_type: artifact_exists
+    description: The canonical project-state artifact exists.
+    severity: fatal
+    artifact_path: timeline.json
+    expected: true
+    reason_code: missing_project_state
+  - check_id: final-proxy-present
+    check_type: artifact_exists
+    description: The final proxy artifact exists.
+    severity: fatal
+    artifact_path: final-proxy.txt
+    expected: true
+    reason_code: missing_final_deliverable
+  - check_id: minimum-artifact-count
+    check_type: artifact_count_at_least
+    description: Both required deliverables are present.
+    severity: fatal
+    expected: 2
+    reason_code: incomplete_deliverable_set
+  - check_id: duration-minimum
+    check_type: json_path_at_least
+    description: The edit meets the minimum requested duration.
+    severity: fatal
+    artifact_path: timeline.json
+    json_path: timeline.duration_seconds
+    expected: 45
+    reason_code: duration_too_short
+  - check_id: duration-maximum
+    check_type: json_path_at_most
+    description: The edit meets the maximum requested duration.
+    severity: fatal
+    artifact_path: timeline.json
+    json_path: timeline.duration_seconds
+    expected: 75
+    reason_code: duration_too_long
+  - check_id: aspect-ratio
+    check_type: json_path_equals
+    description: The timeline uses the requested aspect ratio.
+    severity: fatal
+    artifact_path: timeline.json
+    json_path: timeline.aspect_ratio
+    expected: "16:9"
+    reason_code: wrong_aspect_ratio
+  - check_id: quote-count
+    check_type: json_path_at_least
+    description: The edit uses at least two interview statements.
+    severity: fatal
+    artifact_path: timeline.json
+    json_path: timeline.quote_count
+    expected: 2
+    reason_code: insufficient_interview_selection
+  - check_id: b-roll-count
+    check_type: json_path_at_least
+    description: The edit integrates at least one b-roll cue.
+    severity: major
+    artifact_path: timeline.json
+    json_path: timeline.b_roll_cues
+    expected: 1
+    reason_code: missing_b_roll
+  - check_id: captions-present
+    check_type: json_path_equals
+    description: Captions are present.
+    severity: fatal
+    artifact_path: timeline.json
+    json_path: timeline.captions_present
+    expected: true
+    reason_code: captions_missing
+  - check_id: lower-third-text
+    check_type: json_path_equals
+    description: The lower third uses the supplied identity exactly.
+    severity: fatal
+    artifact_path: timeline.json
+    json_path: timeline.lower_third.text
+    expected: "Alex Rivera — Editor"
+    reason_code: lower_third_mismatch
+  - check_id: closing-card
+    check_type: json_path_equals
+    description: The closing card contains the requested language.
+    severity: fatal
+    artifact_path: timeline.json
+    json_path: timeline.closing_card
+    expected: "Measure accepted work"
+    reason_code: closing_card_mismatch
+  - check_id: editable-project
+    check_type: json_path_equals
+    description: The project remains editable.
+    severity: fatal
+    artifact_path: timeline.json
+    json_path: project.editable
+    expected: true
+    reason_code: flattened_project
+  - check_id: source-media-online
+    check_type: json_path_equals
+    description: All source media remain online.
+    severity: fatal
+    artifact_path: timeline.json
+    json_path: project.source_media_online
+    expected: true
+    reason_code: source_media_offline
+  - check_id: audio-true-peak
+    check_type: json_path_at_most
+    description: The synthetic mix does not exceed 0 dBFS true peak.
+    severity: fatal
+    artifact_path: timeline.json
+    json_path: audio.true_peak_dbfs
+    expected: 0
+    reason_code: audio_clipping
+  - check_id: final-closing-text
+    check_type: text_contains
+    description: The final proxy records the requested closing card.
+    severity: fatal
+    artifact_path: final-proxy.txt
+    expected: "Measure accepted work"
+    reason_code: render_contract_mismatch
+evidence_requirements:
+  - evidence_id: final-output
+    description: The complete final output with temporal and audio continuity.
+    artifact_paths: [final-proxy.txt]
+  - evidence_id: source-context
+    description: The supplied transcript and shot inventory.
+    artifact_paths: [assets/interview-transcript.txt, assets/shot-list.json]
+    needs_source_context: true
+  - evidence_id: project-state
+    description: Canonical editable project and timeline state.
+    artifact_paths: [timeline.json]
+    needs_project_state: true
+semantic_criteria:
+  - criterion_id: brief-adherence
+    description: The result selects and structures material that answers the stated brief.
+    min_score: 0
+    max_score: 5
+    acceptance_threshold: 3
+    fatal_below_threshold: true
+    evidence_requirements: [final-output, source-context, project-state]
+    reason_codes: [wrong_story, omitted_required_material, unsupported_claim]
+  - criterion_id: editorial-coherence
+    description: The piece has a coherent argument and purposeful progression rather than a mechanical assembly.
+    min_score: 0
+    max_score: 5
+    acceptance_threshold: 3
+    fatal_below_threshold: false
+    evidence_requirements: [final-output, source-context]
+    reason_codes: [incoherent_sequence, weak_progression, unmotivated_b_roll]
+acceptable_variation:
+  - Quote order and exact trim points may differ when the resulting argument remains coherent.
+  - Either b-roll source may appear first.
+prohibited_outcomes:
+  - Materially changing the supplied speaker identity.
+  - Presenting an offline or flattened project as editable.
+mutants:
+  - mutant_id: essential-quote-removed
+    description: Remove the sentence establishing that the editable project is part of the deliverable.
+    changed_dimension: brief-adherence
+    expected_relation: worse
+    artifact_ref: mutants/essential-quote-removed
+  - mutant_id: polished-wrong-identity
+    description: Preserve polish while changing the speaker identity and closing proposition.
+    changed_dimension: brief-adherence
+    expected_relation: worse
+    artifact_ref: candidates/bad
+acceptance_policy:
+  require_valid_artifact: true
+  require_all_fatal_checks: true
+  require_semantic_acceptance: true
+  reject_on_fatal_semantic_failure: true
+confidentiality: public
+metadata:
+  fixture_purpose: instrument_validation
+  source_domain: synthetic_interview

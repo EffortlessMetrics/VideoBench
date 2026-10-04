@@ -1,0 +1,534 @@
+{
+  "$defs": {
+    "AcceptancePolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "reject_on_fatal_semantic_failure": {
+          "default": true,
+          "title": "Reject On Fatal Semantic Failure",
+          "type": "boolean"
+        },
+        "require_all_fatal_checks": {
+          "default": true,
+          "title": "Require All Fatal Checks",
+          "type": "boolean"
+        },
+        "require_semantic_acceptance": {
+          "default": true,
+          "title": "Require Semantic Acceptance",
+          "type": "boolean"
+        },
+        "require_valid_artifact": {
+          "default": true,
+          "title": "Require Valid Artifact",
+          "type": "boolean"
+        }
+      },
+      "title": "AcceptancePolicy",
+      "type": "object"
+    },
+    "AssetSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "asset_id": {
+          "title": "Asset Id",
+          "type": "string"
+        },
+        "media_type": {
+          "$ref": "#/$defs/MediaType"
+        },
+        "metadata": {
+          "additionalProperties": true,
+          "title": "Metadata",
+          "type": "object"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "public_eligible": {
+          "default": false,
+          "title": "Public Eligible",
+          "type": "boolean"
+        },
+        "role": {
+          "title": "Role",
+          "type": "string"
+        },
+        "sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sha256"
+        }
+      },
+      "required": [
+        "asset_id",
+        "path",
+        "media_type",
+        "role"
+      ],
+      "title": "AssetSpec",
+      "type": "object"
+    },
+    "CheckSeverity": {
+      "enum": [
+        "fatal",
+        "major",
+        "advisory"
+      ],
+      "title": "CheckSeverity",
+      "type": "string"
+    },
+    "CheckType": {
+      "enum": [
+        "artifact_exists",
+        "artifact_count_at_least",
+        "file_sha256_equals",
+        "text_contains",
+        "json_path_equals",
+        "json_path_in",
+        "json_path_at_least",
+        "json_path_at_most",
+        "media_property_equals"
+      ],
+      "title": "CheckType",
+      "type": "string"
+    },
+    "Confidentiality": {
+      "enum": [
+        "public",
+        "controlled",
+        "private_canary",
+        "retired_audit"
+      ],
+      "title": "Confidentiality",
+      "type": "string"
+    },
+    "DeliverableSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "deliverable_id": {
+          "title": "Deliverable Id",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "editable": {
+          "default": false,
+          "title": "Editable",
+          "type": "boolean"
+        },
+        "media_type": {
+          "$ref": "#/$defs/MediaType"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "required": {
+          "default": true,
+          "title": "Required",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "deliverable_id",
+        "path",
+        "media_type",
+        "description"
+      ],
+      "title": "DeliverableSpec",
+      "type": "object"
+    },
+    "EvidenceRequirement": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_paths": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Artifact Paths",
+          "type": "array"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "evidence_id": {
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "needs_audio": {
+          "default": false,
+          "title": "Needs Audio",
+          "type": "boolean"
+        },
+        "needs_continuous_video": {
+          "default": false,
+          "title": "Needs Continuous Video",
+          "type": "boolean"
+        },
+        "needs_project_state": {
+          "default": false,
+          "title": "Needs Project State",
+          "type": "boolean"
+        },
+        "needs_source_context": {
+          "default": false,
+          "title": "Needs Source Context",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "evidence_id",
+        "description"
+      ],
+      "title": "EvidenceRequirement",
+      "type": "object"
+    },
+    "Instrument": {
+      "enum": [
+        "surface_conformance",
+        "execution_core",
+        "editorial_core",
+        "project_field",
+        "revision_recovery",
+        "judge_qualification"
+      ],
+      "title": "Instrument",
+      "type": "string"
+    },
+    "MediaType": {
+      "enum": [
+        "video",
+        "audio",
+        "image",
+        "project",
+        "timeline",
+        "transcript",
+        "caption",
+        "data",
+        "other"
+      ],
+      "title": "MediaType",
+      "type": "string"
+    },
+    "MutantRef": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_ref": {
+          "title": "Artifact Ref",
+          "type": "string"
+        },
+        "changed_dimension": {
+          "title": "Changed Dimension",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "expected_relation": {
+          "enum": [
+            "better",
+            "worse",
+            "equivalent",
+            "unjudgeable"
+          ],
+          "title": "Expected Relation",
+          "type": "string"
+        },
+        "mutant_id": {
+          "title": "Mutant Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "mutant_id",
+        "description",
+        "changed_dimension",
+        "expected_relation",
+        "artifact_ref"
+      ],
+      "title": "MutantRef",
+      "type": "object"
+    },
+    "ObjectiveCheckSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Artifact Path"
+        },
+        "check_id": {
+          "title": "Check Id",
+          "type": "string"
+        },
+        "check_type": {
+          "$ref": "#/$defs/CheckType"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "expected": {
+          "default": null,
+          "title": "Expected"
+        },
+        "json_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Json Path"
+        },
+        "reason_code": {
+          "title": "Reason Code",
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/$defs/CheckSeverity",
+          "default": "fatal"
+        }
+      },
+      "required": [
+        "check_id",
+        "check_type",
+        "description",
+        "reason_code"
+      ],
+      "title": "ObjectiveCheckSpec",
+      "type": "object"
+    },
+    "OutputContract": {
+      "additionalProperties": false,
+      "properties": {
+        "deliverables": {
+          "items": {
+            "$ref": "#/$defs/DeliverableSpec"
+          },
+          "title": "Deliverables",
+          "type": "array"
+        },
+        "prohibited_shortcuts": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Prohibited Shortcuts",
+          "type": "array"
+        },
+        "protected_invariants": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Protected Invariants",
+          "type": "array"
+        },
+        "requirements": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Requirements",
+          "type": "array"
+        }
+      },
+      "required": [
+        "deliverables"
+      ],
+      "title": "OutputContract",
+      "type": "object"
+    },
+    "SemanticCriterion": {
+      "additionalProperties": false,
+      "properties": {
+        "acceptance_threshold": {
+          "default": 3.0,
+          "title": "Acceptance Threshold",
+          "type": "number"
+        },
+        "criterion_id": {
+          "title": "Criterion Id",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "evidence_requirements": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Requirements",
+          "type": "array"
+        },
+        "fatal_below_threshold": {
+          "default": false,
+          "title": "Fatal Below Threshold",
+          "type": "boolean"
+        },
+        "max_score": {
+          "default": 5.0,
+          "title": "Max Score",
+          "type": "number"
+        },
+        "min_score": {
+          "default": 0.0,
+          "title": "Min Score",
+          "type": "number"
+        },
+        "reason_codes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Reason Codes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "criterion_id",
+        "description"
+      ],
+      "title": "SemanticCriterion",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "acceptable_variation": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Acceptable Variation",
+      "type": "array"
+    },
+    "acceptance_policy": {
+      "$ref": "#/$defs/AcceptancePolicy"
+    },
+    "assets": {
+      "items": {
+        "$ref": "#/$defs/AssetSpec"
+      },
+      "title": "Assets",
+      "type": "array"
+    },
+    "brief": {
+      "title": "Brief",
+      "type": "string"
+    },
+    "confidentiality": {
+      "$ref": "#/$defs/Confidentiality",
+      "default": "public"
+    },
+    "evidence_requirements": {
+      "items": {
+        "$ref": "#/$defs/EvidenceRequirement"
+      },
+      "title": "Evidence Requirements",
+      "type": "array"
+    },
+    "family_id": {
+      "title": "Family Id",
+      "type": "string"
+    },
+    "form_id": {
+      "title": "Form Id",
+      "type": "string"
+    },
+    "hidden_obligations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Hidden Obligations",
+      "type": "array"
+    },
+    "instrument": {
+      "$ref": "#/$defs/Instrument"
+    },
+    "metadata": {
+      "additionalProperties": true,
+      "title": "Metadata",
+      "type": "object"
+    },
+    "mutants": {
+      "items": {
+        "$ref": "#/$defs/MutantRef"
+      },
+      "title": "Mutants",
+      "type": "array"
+    },
+    "objective_checks": {
+      "items": {
+        "$ref": "#/$defs/ObjectiveCheckSpec"
+      },
+      "title": "Objective Checks",
+      "type": "array"
+    },
+    "output_contract": {
+      "$ref": "#/$defs/OutputContract"
+    },
+    "prohibited_outcomes": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Prohibited Outcomes",
+      "type": "array"
+    },
+    "public_constraints": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Public Constraints",
+      "type": "array"
+    },
+    "semantic_criteria": {
+      "items": {
+        "$ref": "#/$defs/SemanticCriterion"
+      },
+      "title": "Semantic Criteria",
+      "type": "array"
+    },
+    "task_id": {
+      "title": "Task Id",
+      "type": "string"
+    },
+    "title": {
+      "title": "Title",
+      "type": "string"
+    }
+  },
+  "required": [
+    "task_id",
+    "family_id",
+    "form_id",
+    "title",
+    "instrument",
+    "brief",
+    "assets",
+    "output_contract",
+    "objective_checks"
+  ],
+  "title": "TaskSource",
+  "type": "object"
+}

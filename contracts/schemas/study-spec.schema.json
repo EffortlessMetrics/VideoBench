@@ -1,0 +1,165 @@
+{
+  "$defs": {
+    "Instrument": {
+      "enum": [
+        "surface_conformance",
+        "execution_core",
+        "editorial_core",
+        "project_field",
+        "revision_recovery",
+        "judge_qualification"
+      ],
+      "title": "Instrument",
+      "type": "string"
+    },
+    "StudyFormRef": {
+      "additionalProperties": false,
+      "properties": {
+        "execution_pack_sha256": {
+          "title": "Execution Pack Sha256",
+          "type": "string"
+        },
+        "family_id": {
+          "title": "Family Id",
+          "type": "string"
+        },
+        "form_id": {
+          "title": "Form Id",
+          "type": "string"
+        },
+        "task_id": {
+          "title": "Task Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "task_id",
+        "family_id",
+        "form_id",
+        "execution_pack_sha256"
+      ],
+      "title": "StudyFormRef",
+      "type": "object"
+    },
+    "TreatmentSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "control": {
+          "title": "Control",
+          "type": "string"
+        },
+        "excluded_claims": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Excluded Claims",
+          "type": "array"
+        },
+        "factor": {
+          "title": "Factor",
+          "type": "string"
+        },
+        "hold_fixed": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Hold Fixed",
+          "type": "array"
+        },
+        "permitted_claim": {
+          "title": "Permitted Claim",
+          "type": "string"
+        },
+        "treatment": {
+          "title": "Treatment",
+          "type": "string"
+        }
+      },
+      "required": [
+        "factor",
+        "control",
+        "treatment",
+        "hold_fixed",
+        "permitted_claim"
+      ],
+      "title": "TreatmentSpec",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "analysis_policy": {
+      "additionalProperties": true,
+      "title": "Analysis Policy",
+      "type": "object"
+    },
+    "attempts_per_form": {
+      "minimum": 1,
+      "title": "Attempts Per Form",
+      "type": "integer"
+    },
+    "forms": {
+      "items": {
+        "$ref": "#/$defs/StudyFormRef"
+      },
+      "minItems": 1,
+      "title": "Forms",
+      "type": "array"
+    },
+    "instrument": {
+      "$ref": "#/$defs/Instrument"
+    },
+    "preregistered_at": {
+      "format": "date-time",
+      "title": "Preregistered At",
+      "type": "string"
+    },
+    "pricing_policy_id": {
+      "title": "Pricing Policy Id",
+      "type": "string"
+    },
+    "scoring_policy_id": {
+      "title": "Scoring Policy Id",
+      "type": "string"
+    },
+    "stack_ids": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Stack Ids",
+      "type": "array"
+    },
+    "study_id": {
+      "title": "Study Id",
+      "type": "string"
+    },
+    "title": {
+      "title": "Title",
+      "type": "string"
+    },
+    "treatment": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TreatmentSpec"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "study_id",
+    "title",
+    "instrument",
+    "forms",
+    "stack_ids",
+    "attempts_per_form",
+    "scoring_policy_id",
+    "pricing_policy_id"
+  ],
+  "title": "StudySpec",
+  "type": "object"
+}

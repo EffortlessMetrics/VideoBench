@@ -1,0 +1,28 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "mean_acceptance_threshold": {
+      "default": 3.0,
+      "title": "Mean Acceptance Threshold",
+      "type": "number"
+    },
+    "policy_id": {
+      "title": "Policy Id",
+      "type": "string"
+    },
+    "semantic_aggregation": {
+      "default": "all_thresholds",
+      "enum": [
+        "all_thresholds",
+        "mean_threshold"
+      ],
+      "title": "Semantic Aggregation",
+      "type": "string"
+    }
+  },
+  "required": [
+    "policy_id"
+  ],
+  "title": "ScoringPolicy",
+  "type": "object"
+}

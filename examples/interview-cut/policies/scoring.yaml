@@ -1,0 +1,3 @@
+policy_id: scoring-v1-gated
+semantic_aggregation: all_thresholds
+mean_acceptance_threshold: 3.0

@@ -1,0 +1,17 @@
+study_id: public-development-surface-proof-v1
+title: Synthetic known-good and known-bad instrument validation
+instrument: project_field
+forms:
+  - task_id: interview-cut-demo-v1
+    family_id: interview-compression
+    form_id: public-development-001
+    execution_pack_sha256: 7c0b2d3bcd48914e70607f5ca9e54de9cefb30cf11eefdd9886456304110c0f2
+stack_ids:
+  - mock-good
+  - mock-bad
+attempts_per_form: 1
+scoring_policy_id: scoring-v1-gated
+pricing_policy_id: synthetic-pricing-2026-10-04
+analysis_policy:
+  status: instrument_validation_only
+  independent_unit: family

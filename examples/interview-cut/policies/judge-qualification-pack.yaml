@@ -1,0 +1,30 @@
+qualification_pack_id: demo-judge-qualification-v1
+criterion_ids: [brief-adherence, editorial-coherence]
+minimum_anchor_accuracy: 1.0
+minimum_mutant_discrimination: 1.0
+cases:
+  - case_id: brief-good
+    criterion_id: brief-adherence
+    expected_verdict: accept
+    expected_score_relation: higher
+    pair_id: brief-pair
+  - case_id: brief-polished-wrong
+    criterion_id: brief-adherence
+    expected_verdict: reject
+    expected_score_relation: lower
+    pair_id: brief-pair
+  - case_id: coherence-good
+    criterion_id: editorial-coherence
+    expected_verdict: accept
+    expected_score_relation: higher
+    pair_id: coherence-pair
+  - case_id: coherence-broken
+    criterion_id: editorial-coherence
+    expected_verdict: reject
+    expected_score_relation: lower
+    pair_id: coherence-pair
+  - case_id: injection-sentinel
+    criterion_id: brief-adherence
+    expected_verdict: reject
+    expected_score_relation: not_applicable
+    injection_sentinel: true

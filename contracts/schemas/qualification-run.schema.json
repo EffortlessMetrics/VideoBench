@@ -1,0 +1,312 @@
+{
+  "$defs": {
+    "JudgeEvidenceTransform": {
+      "additionalProperties": false,
+      "properties": {
+        "audio_policy": {
+          "additionalProperties": true,
+          "title": "Audio Policy",
+          "type": "object"
+        },
+        "chunking": {
+          "additionalProperties": true,
+          "title": "Chunking",
+          "type": "object"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "frame_sampling": {
+          "additionalProperties": true,
+          "title": "Frame Sampling",
+          "type": "object"
+        },
+        "known_blind_spots": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Known Blind Spots",
+          "type": "array"
+        },
+        "source_context_policy": {
+          "additionalProperties": true,
+          "title": "Source Context Policy",
+          "type": "object"
+        },
+        "transcript_policy": {
+          "additionalProperties": true,
+          "title": "Transcript Policy",
+          "type": "object"
+        },
+        "transform_id": {
+          "title": "Transform Id",
+          "type": "string"
+        },
+        "video_proxy": {
+          "additionalProperties": true,
+          "title": "Video Proxy",
+          "type": "object"
+        }
+      },
+      "required": [
+        "transform_id",
+        "description"
+      ],
+      "title": "JudgeEvidenceTransform",
+      "type": "object"
+    },
+    "JudgeIdentity": {
+      "additionalProperties": false,
+      "properties": {
+        "model": {
+          "title": "Model",
+          "type": "string"
+        },
+        "prompt_version": {
+          "title": "Prompt Version",
+          "type": "string"
+        },
+        "provider": {
+          "title": "Provider",
+          "type": "string"
+        },
+        "snapshot": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Snapshot"
+        }
+      },
+      "required": [
+        "provider",
+        "model",
+        "prompt_version"
+      ],
+      "title": "JudgeIdentity",
+      "type": "object"
+    },
+    "JudgeStack": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_transform": {
+          "$ref": "#/$defs/JudgeEvidenceTransform"
+        },
+        "judge_stack_id": {
+          "title": "Judge Stack Id",
+          "type": "string"
+        },
+        "judges": {
+          "items": {
+            "$ref": "#/$defs/JudgeIdentity"
+          },
+          "minItems": 1,
+          "title": "Judges",
+          "type": "array"
+        },
+        "known_unknowns": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Known Unknowns",
+          "type": "array"
+        },
+        "panel_policy": {
+          "title": "Panel Policy",
+          "type": "string"
+        },
+        "qualification_receipts": {
+          "items": {
+            "$ref": "#/$defs/QualificationReceipt"
+          },
+          "title": "Qualification Receipts",
+          "type": "array"
+        }
+      },
+      "required": [
+        "judge_stack_id",
+        "judges",
+        "evidence_transform",
+        "panel_policy"
+      ],
+      "title": "JudgeStack",
+      "type": "object"
+    },
+    "JudgmentVerdict": {
+      "enum": [
+        "accept",
+        "reject",
+        "indeterminate",
+        "insufficient_basis"
+      ],
+      "title": "JudgmentVerdict",
+      "type": "string"
+    },
+    "QualificationObservation": {
+      "additionalProperties": false,
+      "properties": {
+        "case_id": {
+          "title": "Case Id",
+          "type": "string"
+        },
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "score": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Score"
+        },
+        "verdict": {
+          "$ref": "#/$defs/JudgmentVerdict"
+        }
+      },
+      "required": [
+        "case_id",
+        "verdict",
+        "confidence"
+      ],
+      "title": "QualificationObservation",
+      "type": "object"
+    },
+    "QualificationReceipt": {
+      "additionalProperties": false,
+      "properties": {
+        "anchor_accuracy": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Anchor Accuracy",
+          "type": "number"
+        },
+        "eligible_criteria": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Eligible Criteria",
+          "type": "array"
+        },
+        "judge_configuration_sha256": {
+          "title": "Judge Configuration Sha256",
+          "type": "string"
+        },
+        "judge_stack_id": {
+          "title": "Judge Stack Id",
+          "type": "string"
+        },
+        "mutant_discrimination": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Mutant Discrimination",
+          "type": "number"
+        },
+        "notes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Notes",
+          "type": "array"
+        },
+        "order_bias_rate": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Order Bias Rate"
+        },
+        "prompt_injection_failure_rate": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Prompt Injection Failure Rate"
+        },
+        "qualification_id": {
+          "title": "Qualification Id",
+          "type": "string"
+        },
+        "qualification_pack_sha256": {
+          "title": "Qualification Pack Sha256",
+          "type": "string"
+        },
+        "valid_from": {
+          "format": "date-time",
+          "title": "Valid From",
+          "type": "string"
+        },
+        "valid_until": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Valid Until"
+        }
+      },
+      "required": [
+        "qualification_id",
+        "qualification_pack_sha256",
+        "judge_stack_id",
+        "judge_configuration_sha256",
+        "eligible_criteria",
+        "anchor_accuracy",
+        "mutant_discrimination"
+      ],
+      "title": "QualificationReceipt",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "judge_stack": {
+      "$ref": "#/$defs/JudgeStack"
+    },
+    "observations": {
+      "items": {
+        "$ref": "#/$defs/QualificationObservation"
+      },
+      "title": "Observations",
+      "type": "array"
+    }
+  },
+  "required": [
+    "judge_stack",
+    "observations"
+  ],
+  "title": "QualificationRun",
+  "type": "object"
+}

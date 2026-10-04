@@ -1,0 +1,56 @@
+name: Task-family proposal
+description: Propose a new semantic editing family or form
+title: "family: "
+body:
+  - type: input
+    id: construct
+    attributes:
+      label: Construct
+      description: What editing work does this family measure?
+    validations:
+      required: true
+  - type: dropdown
+    id: instrument
+    attributes:
+      label: Instrument
+      options:
+        - Surface Conformance
+        - Agentic Execution Core
+        - Editorial Decision Core
+        - Project / Field
+        - Revision / Recovery
+        - Judge Qualification
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Observed need or professional basis
+      description: Give the real failure, workflow, or professional-editing reason this family should exist.
+    validations:
+      required: true
+  - type: textarea
+    id: contract
+    attributes:
+      label: Work contract and observable terminal state
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Acceptable alternatives and controls
+    validations:
+      required: true
+  - type: textarea
+    id: mutants
+    attributes:
+      label: Controlled mutants
+      description: What known defect would prove the verifier or judge can discriminate this construct?
+    validations:
+      required: true
+  - type: textarea
+    id: rights
+    attributes:
+      label: Source rights, privacy, and publication plan
+    validations:
+      required: true

@@ -1,0 +1,85 @@
+{
+  "$defs": {
+    "StackSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "accepted_work_rate": {
+          "title": "Accepted Work Rate",
+          "type": "number"
+        },
+        "attempts": {
+          "title": "Attempts",
+          "type": "integer"
+        },
+        "families": {
+          "title": "Families",
+          "type": "integer"
+        },
+        "family_macro_acceptance": {
+          "title": "Family Macro Acceptance",
+          "type": "number"
+        },
+        "indeterminate_rate": {
+          "title": "Indeterminate Rate",
+          "type": "number"
+        },
+        "mean_human_seconds": {
+          "title": "Mean Human Seconds",
+          "type": "number"
+        },
+        "mean_list_equivalent_cost_usd": {
+          "title": "Mean List Equivalent Cost Usd",
+          "type": "number"
+        },
+        "mean_wall_seconds": {
+          "title": "Mean Wall Seconds",
+          "type": "number"
+        },
+        "stack_id": {
+          "title": "Stack Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "stack_id",
+        "attempts",
+        "families",
+        "accepted_work_rate",
+        "family_macro_acceptance",
+        "mean_list_equivalent_cost_usd",
+        "mean_wall_seconds",
+        "mean_human_seconds",
+        "indeterminate_rate"
+      ],
+      "title": "StackSummary",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "notes": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Notes",
+      "type": "array"
+    },
+    "study_id": {
+      "title": "Study Id",
+      "type": "string"
+    },
+    "summaries": {
+      "items": {
+        "$ref": "#/$defs/StackSummary"
+      },
+      "title": "Summaries",
+      "type": "array"
+    }
+  },
+  "required": [
+    "study_id",
+    "summaries"
+  ],
+  "title": "StudySummary",
+  "type": "object"
+}

@@ -1,0 +1,15 @@
+cff-version: 1.2.0
+message: "If you use VideoBench, cite the software release and the exact frozen pack or study receipt used."
+title: "VideoBench"
+type: software
+version: 0.1.0
+license: "AGPL-3.0-only"
+authors:
+  - family-names: Zimmerman
+    given-names: Steven
+repository-code: "https://github.com/EffortlessMetrics/VideoBench"
+url: "https://github.com/EffortlessMetrics/VideoBench"
+abstract: >-
+  VideoBench is an evidence-first instrument suite for evaluating agentic
+  professional video-editing systems, including operation, editorial decisions,
+  revision, reliability, judge validity, and cost to accepted work.

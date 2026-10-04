@@ -1,0 +1,104 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "anchor_accuracy": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Anchor Accuracy",
+      "type": "number"
+    },
+    "eligible_criteria": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Eligible Criteria",
+      "type": "array"
+    },
+    "judge_configuration_sha256": {
+      "title": "Judge Configuration Sha256",
+      "type": "string"
+    },
+    "judge_stack_id": {
+      "title": "Judge Stack Id",
+      "type": "string"
+    },
+    "mutant_discrimination": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Mutant Discrimination",
+      "type": "number"
+    },
+    "notes": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Notes",
+      "type": "array"
+    },
+    "order_bias_rate": {
+      "anyOf": [
+        {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Order Bias Rate"
+    },
+    "prompt_injection_failure_rate": {
+      "anyOf": [
+        {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Prompt Injection Failure Rate"
+    },
+    "qualification_id": {
+      "title": "Qualification Id",
+      "type": "string"
+    },
+    "qualification_pack_sha256": {
+      "title": "Qualification Pack Sha256",
+      "type": "string"
+    },
+    "valid_from": {
+      "format": "date-time",
+      "title": "Valid From",
+      "type": "string"
+    },
+    "valid_until": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Valid Until"
+    }
+  },
+  "required": [
+    "qualification_id",
+    "qualification_pack_sha256",
+    "judge_stack_id",
+    "judge_configuration_sha256",
+    "eligible_criteria",
+    "anchor_accuracy",
+    "mutant_discrimination"
+  ],
+  "title": "QualificationReceipt",
+  "type": "object"
+}

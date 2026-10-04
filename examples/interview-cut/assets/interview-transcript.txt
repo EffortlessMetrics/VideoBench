@@ -1,0 +1,4 @@
+00:00:01 Alex: Editing is not choosing the most polished sentence. It is choosing the moment that carries the argument.
+00:00:12 Alex: The tool should preserve the decisions that are already right when the client changes one part of the brief.
+00:00:25 Alex: A finished render matters, but the editable project is part of the deliverable.
+00:00:38 Alex: We should measure cost to accepted work, not cost to produce any output.

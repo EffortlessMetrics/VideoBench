@@ -1,0 +1,196 @@
+{
+  "$defs": {
+    "AcceptancePolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "reject_on_fatal_semantic_failure": {
+          "default": true,
+          "title": "Reject On Fatal Semantic Failure",
+          "type": "boolean"
+        },
+        "require_all_fatal_checks": {
+          "default": true,
+          "title": "Require All Fatal Checks",
+          "type": "boolean"
+        },
+        "require_semantic_acceptance": {
+          "default": true,
+          "title": "Require Semantic Acceptance",
+          "type": "boolean"
+        },
+        "require_valid_artifact": {
+          "default": true,
+          "title": "Require Valid Artifact",
+          "type": "boolean"
+        }
+      },
+      "title": "AcceptancePolicy",
+      "type": "object"
+    },
+    "ArtifactValidity": {
+      "enum": [
+        "valid",
+        "invalid",
+        "contested",
+        "instrument_failure",
+        "not_proven"
+      ],
+      "title": "ArtifactValidity",
+      "type": "string"
+    },
+    "CheckResult": {
+      "additionalProperties": false,
+      "properties": {
+        "actual": {
+          "default": null,
+          "title": "Actual"
+        },
+        "check_id": {
+          "title": "Check Id",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "evidence_paths": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Paths",
+          "type": "array"
+        },
+        "expected": {
+          "default": null,
+          "title": "Expected"
+        },
+        "reason_code": {
+          "title": "Reason Code",
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/$defs/CheckSeverity"
+        },
+        "status": {
+          "$ref": "#/$defs/CheckStatus"
+        }
+      },
+      "required": [
+        "check_id",
+        "status",
+        "severity",
+        "reason_code",
+        "description"
+      ],
+      "title": "CheckResult",
+      "type": "object"
+    },
+    "CheckSeverity": {
+      "enum": [
+        "fatal",
+        "major",
+        "advisory"
+      ],
+      "title": "CheckSeverity",
+      "type": "string"
+    },
+    "CheckStatus": {
+      "enum": [
+        "pass",
+        "fail",
+        "not_observable",
+        "instrument_failure"
+      ],
+      "title": "CheckStatus",
+      "type": "string"
+    },
+    "Instrument": {
+      "enum": [
+        "surface_conformance",
+        "execution_core",
+        "editorial_core",
+        "project_field",
+        "revision_recovery",
+        "judge_qualification"
+      ],
+      "title": "Instrument",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "acceptance_policy": {
+      "$ref": "#/$defs/AcceptancePolicy"
+    },
+    "artifact_validity": {
+      "$ref": "#/$defs/ArtifactValidity"
+    },
+    "attempt_id": {
+      "title": "Attempt Id",
+      "type": "string"
+    },
+    "family_id": {
+      "title": "Family Id",
+      "type": "string"
+    },
+    "fatal_failures": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Fatal Failures",
+      "type": "array"
+    },
+    "form_id": {
+      "title": "Form Id",
+      "type": "string"
+    },
+    "hard_contract_pass": {
+      "title": "Hard Contract Pass",
+      "type": "boolean"
+    },
+    "instrument": {
+      "$ref": "#/$defs/Instrument"
+    },
+    "reason_codes": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Reason Codes",
+      "type": "array"
+    },
+    "results": {
+      "items": {
+        "$ref": "#/$defs/CheckResult"
+      },
+      "title": "Results",
+      "type": "array"
+    },
+    "task_id": {
+      "title": "Task Id",
+      "type": "string"
+    },
+    "verifier_pack_sha256": {
+      "title": "Verifier Pack Sha256",
+      "type": "string"
+    },
+    "work_result_sha256": {
+      "title": "Work Result Sha256",
+      "type": "string"
+    }
+  },
+  "required": [
+    "task_id",
+    "family_id",
+    "form_id",
+    "instrument",
+    "attempt_id",
+    "work_result_sha256",
+    "verifier_pack_sha256",
+    "acceptance_policy",
+    "hard_contract_pass",
+    "artifact_validity",
+    "results"
+  ],
+  "title": "VerificationBundle",
+  "type": "object"
+}

@@ -1,0 +1,278 @@
+{
+  "$defs": {
+    "AcceptancePolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "reject_on_fatal_semantic_failure": {
+          "default": true,
+          "title": "Reject On Fatal Semantic Failure",
+          "type": "boolean"
+        },
+        "require_all_fatal_checks": {
+          "default": true,
+          "title": "Require All Fatal Checks",
+          "type": "boolean"
+        },
+        "require_semantic_acceptance": {
+          "default": true,
+          "title": "Require Semantic Acceptance",
+          "type": "boolean"
+        },
+        "require_valid_artifact": {
+          "default": true,
+          "title": "Require Valid Artifact",
+          "type": "boolean"
+        }
+      },
+      "title": "AcceptancePolicy",
+      "type": "object"
+    },
+    "Confidentiality": {
+      "enum": [
+        "public",
+        "controlled",
+        "private_canary",
+        "retired_audit"
+      ],
+      "title": "Confidentiality",
+      "type": "string"
+    },
+    "EvidenceRequirement": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_paths": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Artifact Paths",
+          "type": "array"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "evidence_id": {
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "needs_audio": {
+          "default": false,
+          "title": "Needs Audio",
+          "type": "boolean"
+        },
+        "needs_continuous_video": {
+          "default": false,
+          "title": "Needs Continuous Video",
+          "type": "boolean"
+        },
+        "needs_project_state": {
+          "default": false,
+          "title": "Needs Project State",
+          "type": "boolean"
+        },
+        "needs_source_context": {
+          "default": false,
+          "title": "Needs Source Context",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "evidence_id",
+        "description"
+      ],
+      "title": "EvidenceRequirement",
+      "type": "object"
+    },
+    "Instrument": {
+      "enum": [
+        "surface_conformance",
+        "execution_core",
+        "editorial_core",
+        "project_field",
+        "revision_recovery",
+        "judge_qualification"
+      ],
+      "title": "Instrument",
+      "type": "string"
+    },
+    "MutantRef": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_ref": {
+          "title": "Artifact Ref",
+          "type": "string"
+        },
+        "changed_dimension": {
+          "title": "Changed Dimension",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "expected_relation": {
+          "enum": [
+            "better",
+            "worse",
+            "equivalent",
+            "unjudgeable"
+          ],
+          "title": "Expected Relation",
+          "type": "string"
+        },
+        "mutant_id": {
+          "title": "Mutant Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "mutant_id",
+        "description",
+        "changed_dimension",
+        "expected_relation",
+        "artifact_ref"
+      ],
+      "title": "MutantRef",
+      "type": "object"
+    },
+    "SemanticCriterion": {
+      "additionalProperties": false,
+      "properties": {
+        "acceptance_threshold": {
+          "default": 3.0,
+          "title": "Acceptance Threshold",
+          "type": "number"
+        },
+        "criterion_id": {
+          "title": "Criterion Id",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "evidence_requirements": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Requirements",
+          "type": "array"
+        },
+        "fatal_below_threshold": {
+          "default": false,
+          "title": "Fatal Below Threshold",
+          "type": "boolean"
+        },
+        "max_score": {
+          "default": 5.0,
+          "title": "Max Score",
+          "type": "number"
+        },
+        "min_score": {
+          "default": 0.0,
+          "title": "Min Score",
+          "type": "number"
+        },
+        "reason_codes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Reason Codes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "criterion_id",
+        "description"
+      ],
+      "title": "SemanticCriterion",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "acceptable_variation": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Acceptable Variation",
+      "type": "array"
+    },
+    "acceptance_policy": {
+      "$ref": "#/$defs/AcceptancePolicy"
+    },
+    "confidentiality": {
+      "$ref": "#/$defs/Confidentiality",
+      "default": "public"
+    },
+    "evidence_requirements": {
+      "items": {
+        "$ref": "#/$defs/EvidenceRequirement"
+      },
+      "title": "Evidence Requirements",
+      "type": "array"
+    },
+    "execution_pack_sha256": {
+      "title": "Execution Pack Sha256",
+      "type": "string"
+    },
+    "family_id": {
+      "title": "Family Id",
+      "type": "string"
+    },
+    "form_id": {
+      "title": "Form Id",
+      "type": "string"
+    },
+    "instrument": {
+      "$ref": "#/$defs/Instrument"
+    },
+    "mutants": {
+      "items": {
+        "$ref": "#/$defs/MutantRef"
+      },
+      "title": "Mutants",
+      "type": "array"
+    },
+    "prohibited_outcomes": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Prohibited Outcomes",
+      "type": "array"
+    },
+    "required_transform_capabilities": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Required Transform Capabilities",
+      "type": "array"
+    },
+    "semantic_criteria": {
+      "items": {
+        "$ref": "#/$defs/SemanticCriterion"
+      },
+      "title": "Semantic Criteria",
+      "type": "array"
+    },
+    "task_id": {
+      "title": "Task Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "task_id",
+    "family_id",
+    "form_id",
+    "instrument",
+    "execution_pack_sha256",
+    "evidence_requirements",
+    "semantic_criteria",
+    "acceptable_variation",
+    "prohibited_outcomes",
+    "mutants",
+    "acceptance_policy"
+  ],
+  "title": "JudgePack",
+  "type": "object"
+}

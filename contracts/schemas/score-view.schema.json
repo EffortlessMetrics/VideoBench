@@ -1,0 +1,329 @@
+{
+  "$defs": {
+    "ArtifactValidity": {
+      "enum": [
+        "valid",
+        "invalid",
+        "contested",
+        "instrument_failure",
+        "not_proven"
+      ],
+      "title": "ArtifactValidity",
+      "type": "string"
+    },
+    "ComparabilityStatus": {
+      "enum": [
+        "directly_comparable",
+        "diagnostically_comparable",
+        "valid_non_comparable"
+      ],
+      "title": "ComparabilityStatus",
+      "type": "string"
+    },
+    "Confidentiality": {
+      "enum": [
+        "public",
+        "controlled",
+        "private_canary",
+        "retired_audit"
+      ],
+      "title": "Confidentiality",
+      "type": "string"
+    },
+    "Instrument": {
+      "enum": [
+        "surface_conformance",
+        "execution_core",
+        "editorial_core",
+        "project_field",
+        "revision_recovery",
+        "judge_qualification"
+      ],
+      "title": "Instrument",
+      "type": "string"
+    },
+    "JudgmentStatus": {
+      "enum": [
+        "unjudged",
+        "self_judged",
+        "qualified_panel_judged",
+        "human_adjudicated"
+      ],
+      "title": "JudgmentStatus",
+      "type": "string"
+    },
+    "JudgmentVerdict": {
+      "enum": [
+        "accept",
+        "reject",
+        "indeterminate",
+        "insufficient_basis"
+      ],
+      "title": "JudgmentVerdict",
+      "type": "string"
+    },
+    "ProvenanceStatus": {
+      "enum": [
+        "self_submitted",
+        "peer_reproduced",
+        "official_reproduced",
+        "official_hosted",
+        "attested_environment"
+      ],
+      "title": "ProvenanceStatus",
+      "type": "string"
+    },
+    "TrustReceipt": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_validity": {
+          "$ref": "#/$defs/ArtifactValidity",
+          "default": "not_proven"
+        },
+        "comparability": {
+          "$ref": "#/$defs/ComparabilityStatus",
+          "default": "valid_non_comparable"
+        },
+        "confidentiality": {
+          "$ref": "#/$defs/Confidentiality",
+          "default": "public"
+        },
+        "evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "judgment_status": {
+          "$ref": "#/$defs/JudgmentStatus",
+          "default": "unjudged"
+        },
+        "provenance": {
+          "$ref": "#/$defs/ProvenanceStatus",
+          "default": "self_submitted"
+        }
+      },
+      "title": "TrustReceipt",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "accepted_work": {
+      "title": "Accepted Work",
+      "type": "boolean"
+    },
+    "artifact_valid": {
+      "title": "Artifact Valid",
+      "type": "boolean"
+    },
+    "attempt_id": {
+      "title": "Attempt Id",
+      "type": "string"
+    },
+    "candidate_list_equivalent_cost_usd": {
+      "minimum": 0.0,
+      "title": "Candidate List Equivalent Cost Usd",
+      "type": "number"
+    },
+    "candidate_metered_cost_usd": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Candidate Metered Cost Usd"
+    },
+    "criterion_scores": {
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "title": "Criterion Scores",
+      "type": "object"
+    },
+    "criterion_verdicts": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JudgmentVerdict"
+      },
+      "title": "Criterion Verdicts",
+      "type": "object"
+    },
+    "execution_pack_sha256": {
+      "title": "Execution Pack Sha256",
+      "type": "string"
+    },
+    "family_id": {
+      "title": "Family Id",
+      "type": "string"
+    },
+    "form_id": {
+      "title": "Form Id",
+      "type": "string"
+    },
+    "hard_contract_pass": {
+      "title": "Hard Contract Pass",
+      "type": "boolean"
+    },
+    "human_seconds": {
+      "minimum": 0.0,
+      "title": "Human Seconds",
+      "type": "number"
+    },
+    "input_tokens": {
+      "minimum": 0,
+      "title": "Input Tokens",
+      "type": "integer"
+    },
+    "instrument": {
+      "$ref": "#/$defs/Instrument"
+    },
+    "judge_cost_usd": {
+      "anyOf": [
+        {
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Judge Cost Usd"
+    },
+    "judgment_sha256": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Judgment Sha256"
+    },
+    "model_calls": {
+      "minimum": 0,
+      "title": "Model Calls",
+      "type": "integer"
+    },
+    "output_tokens": {
+      "minimum": 0,
+      "title": "Output Tokens",
+      "type": "integer"
+    },
+    "pricing_policy_id": {
+      "title": "Pricing Policy Id",
+      "type": "string"
+    },
+    "pricing_policy_sha256": {
+      "title": "Pricing Policy Sha256",
+      "type": "string"
+    },
+    "reason_codes": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Reason Codes",
+      "type": "array"
+    },
+    "reasoning_tokens": {
+      "minimum": 0,
+      "title": "Reasoning Tokens",
+      "type": "integer"
+    },
+    "scoring_policy_id": {
+      "title": "Scoring Policy Id",
+      "type": "string"
+    },
+    "scoring_policy_sha256": {
+      "title": "Scoring Policy Sha256",
+      "type": "string"
+    },
+    "semantic_acceptance": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Semantic Acceptance"
+    },
+    "stack_id": {
+      "title": "Stack Id",
+      "type": "string"
+    },
+    "task_id": {
+      "title": "Task Id",
+      "type": "string"
+    },
+    "tool_calls": {
+      "minimum": 0,
+      "title": "Tool Calls",
+      "type": "integer"
+    },
+    "trust": {
+      "$ref": "#/$defs/TrustReceipt"
+    },
+    "verification_sha256": {
+      "title": "Verification Sha256",
+      "type": "string"
+    },
+    "wall_seconds": {
+      "minimum": 0.0,
+      "title": "Wall Seconds",
+      "type": "number"
+    },
+    "work_result_sha256": {
+      "title": "Work Result Sha256",
+      "type": "string"
+    }
+  },
+  "required": [
+    "task_id",
+    "family_id",
+    "form_id",
+    "instrument",
+    "execution_pack_sha256",
+    "attempt_id",
+    "stack_id",
+    "work_result_sha256",
+    "verification_sha256",
+    "scoring_policy_sha256",
+    "pricing_policy_sha256",
+    "accepted_work",
+    "artifact_valid",
+    "hard_contract_pass",
+    "semantic_acceptance",
+    "criterion_scores",
+    "criterion_verdicts",
+    "reason_codes",
+    "candidate_metered_cost_usd",
+    "candidate_list_equivalent_cost_usd",
+    "input_tokens",
+    "output_tokens",
+    "reasoning_tokens",
+    "model_calls",
+    "tool_calls",
+    "wall_seconds",
+    "human_seconds",
+    "trust",
+    "scoring_policy_id",
+    "pricing_policy_id"
+  ],
+  "title": "ScoreView",
+  "type": "object"
+}

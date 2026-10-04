@@ -1,0 +1,7 @@
+attempt_id: command-proof-001
+clean_state_id: synthetic-interview-clean-v1
+seed: 1
+recovery_policy: none
+tags:
+  - public-development
+  - command-adapter-proof

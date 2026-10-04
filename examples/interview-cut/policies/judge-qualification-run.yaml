@@ -1,0 +1,48 @@
+judge_stack:
+  judge_stack_id: deterministic-demo-panel
+  judges:
+  - provider: manual
+    model: frozen-anchor-judge
+    snapshot: demo-v1
+    prompt_version: judge-prompt-v1
+  evidence_transform:
+    transform_id: demo-evidence-transform-v1
+    description: Synthetic text and project-state evidence for instrument validation.
+    video_proxy:
+      continuous: false
+    audio_policy:
+      included: false
+    frame_sampling: {}
+    chunking: {}
+    transcript_policy:
+      included: true
+    source_context_policy:
+      included: true
+      project_state: true
+    known_blind_spots:
+    - This synthetic demo does not qualify temporal video or audio judgment.
+  panel_policy: single-qualified-anchor
+  qualification_receipts: []
+  known_unknowns:
+  - The demo panel is not evidence of professional editorial validity.
+observations:
+- case_id: brief-good
+  verdict: accept
+  score: 4.5
+  confidence: 1.0
+- case_id: brief-polished-wrong
+  verdict: reject
+  score: 1.0
+  confidence: 1.0
+- case_id: coherence-good
+  verdict: accept
+  score: 4.2
+  confidence: 1.0
+- case_id: coherence-broken
+  verdict: reject
+  score: 1.2
+  confidence: 1.0
+- case_id: injection-sentinel
+  verdict: reject
+  score: 0.0
+  confidence: 1.0

@@ -1,0 +1,818 @@
+{
+  "$defs": {
+    "Confidentiality": {
+      "enum": [
+        "public",
+        "controlled",
+        "private_canary",
+        "retired_audit"
+      ],
+      "title": "Confidentiality",
+      "type": "string"
+    },
+    "EvidenceArtifact": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_id": {
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "media_type": {
+          "$ref": "#/$defs/MediaType"
+        },
+        "metadata": {
+          "additionalProperties": true,
+          "title": "Metadata",
+          "type": "object"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "semantic_sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Semantic Sha256"
+        },
+        "sha256": {
+          "title": "Sha256",
+          "type": "string"
+        },
+        "size_bytes": {
+          "minimum": 0,
+          "title": "Size Bytes",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "path",
+        "media_type",
+        "sha256",
+        "size_bytes"
+      ],
+      "title": "EvidenceArtifact",
+      "type": "object"
+    },
+    "HarnessPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "context_policy": {
+          "default": "default",
+          "title": "Context Policy",
+          "type": "string"
+        },
+        "harness": {
+          "title": "Harness",
+          "type": "string"
+        },
+        "memory_policy": {
+          "default": "none",
+          "title": "Memory Policy",
+          "type": "string"
+        },
+        "orchestration_policy": {
+          "default": "single_agent",
+          "title": "Orchestration Policy",
+          "type": "string"
+        },
+        "prompt_policy": {
+          "default": "default",
+          "title": "Prompt Policy",
+          "type": "string"
+        },
+        "scaffold_hash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scaffold Hash"
+        },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Version"
+        }
+      },
+      "required": [
+        "harness"
+      ],
+      "title": "HarnessPolicy",
+      "type": "object"
+    },
+    "Instrument": {
+      "enum": [
+        "surface_conformance",
+        "execution_core",
+        "editorial_core",
+        "project_field",
+        "revision_recovery",
+        "judge_qualification"
+      ],
+      "title": "Instrument",
+      "type": "string"
+    },
+    "MediaType": {
+      "enum": [
+        "video",
+        "audio",
+        "image",
+        "project",
+        "timeline",
+        "transcript",
+        "caption",
+        "data",
+        "other"
+      ],
+      "title": "MediaType",
+      "type": "string"
+    },
+    "ModelIdentity": {
+      "additionalProperties": false,
+      "properties": {
+        "model": {
+          "title": "Model",
+          "type": "string"
+        },
+        "product_surface": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Product Surface"
+        },
+        "provider": {
+          "title": "Provider",
+          "type": "string"
+        },
+        "snapshot": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Snapshot"
+        }
+      },
+      "required": [
+        "provider",
+        "model"
+      ],
+      "title": "ModelIdentity",
+      "type": "object"
+    },
+    "OperatorPolicy": {
+      "enum": [
+        "autonomous",
+        "scripted_collaboration",
+        "expert_operated"
+      ],
+      "title": "OperatorPolicy",
+      "type": "string"
+    },
+    "OutcomeStatus": {
+      "enum": [
+        "pass",
+        "fail_candidate",
+        "unsupported_surface",
+        "environment_blocked",
+        "tool_failure",
+        "protocol_invalid",
+        "verifier_failure",
+        "not_observable",
+        "not_proven",
+        "budget_exhausted",
+        "timed_out",
+        "human_abort"
+      ],
+      "title": "OutcomeStatus",
+      "type": "string"
+    },
+    "RecoveryPolicy": {
+      "enum": [
+        "none",
+        "scripted",
+        "adaptive"
+      ],
+      "title": "RecoveryPolicy",
+      "type": "string"
+    },
+    "ResolveEnvironment": {
+      "additionalProperties": false,
+      "properties": {
+        "codecs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Codecs",
+          "type": "array"
+        },
+        "color_management": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Color Management"
+        },
+        "display_profile": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display Profile"
+        },
+        "environment_digest": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Environment Digest"
+        },
+        "fonts": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Fonts",
+          "type": "array"
+        },
+        "gpu": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Gpu"
+        },
+        "machine_id": {
+          "default": "unknown",
+          "title": "Machine Id",
+          "type": "string"
+        },
+        "operating_system": {
+          "title": "Operating System",
+          "type": "string"
+        },
+        "plugins": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Plugins",
+          "type": "array"
+        },
+        "resolve_edition": {
+          "default": "unknown",
+          "title": "Resolve Edition",
+          "type": "string"
+        },
+        "resolve_version": {
+          "title": "Resolve Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operating_system",
+        "resolve_version"
+      ],
+      "title": "ResolveEnvironment",
+      "type": "object"
+    },
+    "ResourceEnvelope": {
+      "additionalProperties": false,
+      "properties": {
+        "max_candidate_cost_usd": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Candidate Cost Usd"
+        },
+        "max_input_tokens": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Input Tokens"
+        },
+        "max_model_calls": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Model Calls"
+        },
+        "max_output_tokens": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Output Tokens"
+        },
+        "max_tool_calls": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Tool Calls"
+        },
+        "max_wall_seconds": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Wall Seconds"
+        }
+      },
+      "title": "ResourceEnvelope",
+      "type": "object"
+    },
+    "RunCondition": {
+      "additionalProperties": false,
+      "properties": {
+        "attempt_id": {
+          "title": "Attempt Id",
+          "type": "string"
+        },
+        "clean_state_id": {
+          "title": "Clean State Id",
+          "type": "string"
+        },
+        "recovery_policy": {
+          "$ref": "#/$defs/RecoveryPolicy",
+          "default": "none"
+        },
+        "seed": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Seed"
+        },
+        "started_at": {
+          "format": "date-time",
+          "title": "Started At",
+          "type": "string"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Tags",
+          "type": "array"
+        }
+      },
+      "required": [
+        "attempt_id",
+        "clean_state_id"
+      ],
+      "title": "RunCondition",
+      "type": "object"
+    },
+    "RunEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "additionalProperties": true,
+          "title": "Data",
+          "type": "object"
+        },
+        "event_type": {
+          "title": "Event Type",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "sequence": {
+          "minimum": 0,
+          "title": "Sequence",
+          "type": "integer"
+        },
+        "timestamp": {
+          "format": "date-time",
+          "title": "Timestamp",
+          "type": "string"
+        }
+      },
+      "required": [
+        "sequence",
+        "event_type",
+        "message"
+      ],
+      "title": "RunEvent",
+      "type": "object"
+    },
+    "RunStack": {
+      "additionalProperties": false,
+      "properties": {
+        "environment": {
+          "$ref": "#/$defs/ResolveEnvironment"
+        },
+        "harness": {
+          "$ref": "#/$defs/HarnessPolicy"
+        },
+        "known_unknowns": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Known Unknowns",
+          "type": "array"
+        },
+        "operator_policy": {
+          "$ref": "#/$defs/OperatorPolicy",
+          "default": "autonomous"
+        },
+        "resource_envelope": {
+          "$ref": "#/$defs/ResourceEnvelope"
+        },
+        "stack_id": {
+          "title": "Stack Id",
+          "type": "string"
+        },
+        "surface": {
+          "$ref": "#/$defs/SurfaceProfile"
+        },
+        "system": {
+          "$ref": "#/$defs/ModelIdentity"
+        }
+      },
+      "required": [
+        "stack_id",
+        "system",
+        "surface",
+        "harness",
+        "environment"
+      ],
+      "title": "RunStack",
+      "type": "object"
+    },
+    "SurfaceKind": {
+      "enum": [
+        "none",
+        "mcp_compound",
+        "mcp_granular",
+        "resolve_scripting",
+        "gui",
+        "command",
+        "manual",
+        "hybrid"
+      ],
+      "title": "SurfaceKind",
+      "type": "string"
+    },
+    "SurfaceProfile": {
+      "additionalProperties": false,
+      "properties": {
+        "action_surface": {
+          "$ref": "#/$defs/SurfaceKind"
+        },
+        "allowed_external_tools": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Allowed External Tools",
+          "type": "array"
+        },
+        "media_analysis_surface": {
+          "$ref": "#/$defs/SurfaceKind",
+          "default": "none"
+        },
+        "network_policy": {
+          "default": "declared",
+          "title": "Network Policy",
+          "type": "string"
+        },
+        "observation_surface": {
+          "$ref": "#/$defs/SurfaceKind"
+        },
+        "tool_granularity": {
+          "default": "unspecified",
+          "title": "Tool Granularity",
+          "type": "string"
+        },
+        "verification_access": {
+          "$ref": "#/$defs/SurfaceKind",
+          "default": "none"
+        }
+      },
+      "required": [
+        "observation_surface",
+        "action_surface"
+      ],
+      "title": "SurfaceProfile",
+      "type": "object"
+    },
+    "UsageRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "active_agent_seconds": {
+          "default": 0.0,
+          "minimum": 0.0,
+          "title": "Active Agent Seconds",
+          "type": "number"
+        },
+        "actual_candidate_cost_usd": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Actual Candidate Cost Usd"
+        },
+        "cache_write_tokens": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Cache Write Tokens",
+          "type": "integer"
+        },
+        "cached_input_tokens": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Cached Input Tokens",
+          "type": "integer"
+        },
+        "compaction_events": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Compaction Events",
+          "type": "integer"
+        },
+        "human_interventions": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Human Interventions",
+          "type": "integer"
+        },
+        "human_seconds": {
+          "default": 0.0,
+          "minimum": 0.0,
+          "title": "Human Seconds",
+          "type": "number"
+        },
+        "image_units": {
+          "default": 0.0,
+          "minimum": 0.0,
+          "title": "Image Units",
+          "type": "number"
+        },
+        "input_tokens": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Input Tokens",
+          "type": "integer"
+        },
+        "metadata": {
+          "additionalProperties": true,
+          "title": "Metadata",
+          "type": "object"
+        },
+        "model_calls": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Model Calls",
+          "type": "integer"
+        },
+        "model_retries": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Model Retries",
+          "type": "integer"
+        },
+        "output_tokens": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Output Tokens",
+          "type": "integer"
+        },
+        "reasoning_tokens": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Reasoning Tokens",
+          "type": "integer"
+        },
+        "render_seconds": {
+          "default": 0.0,
+          "minimum": 0.0,
+          "title": "Render Seconds",
+          "type": "number"
+        },
+        "resolve_processing_seconds": {
+          "default": 0.0,
+          "minimum": 0.0,
+          "title": "Resolve Processing Seconds",
+          "type": "number"
+        },
+        "tool_calls": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Tool Calls",
+          "type": "integer"
+        },
+        "transport_retries": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Transport Retries",
+          "type": "integer"
+        },
+        "video_units": {
+          "default": 0.0,
+          "minimum": 0.0,
+          "title": "Video Units",
+          "type": "number"
+        },
+        "wall_seconds": {
+          "default": 0.0,
+          "minimum": 0.0,
+          "title": "Wall Seconds",
+          "type": "number"
+        }
+      },
+      "title": "UsageRecord",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "artifacts": {
+      "items": {
+        "$ref": "#/$defs/EvidenceArtifact"
+      },
+      "title": "Artifacts",
+      "type": "array"
+    },
+    "confidentiality": {
+      "$ref": "#/$defs/Confidentiality",
+      "default": "public"
+    },
+    "events": {
+      "items": {
+        "$ref": "#/$defs/RunEvent"
+      },
+      "title": "Events",
+      "type": "array"
+    },
+    "execution_pack_sha256": {
+      "title": "Execution Pack Sha256",
+      "type": "string"
+    },
+    "family_id": {
+      "title": "Family Id",
+      "type": "string"
+    },
+    "form_id": {
+      "title": "Form Id",
+      "type": "string"
+    },
+    "instrument": {
+      "$ref": "#/$defs/Instrument"
+    },
+    "known_missing_evidence": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Known Missing Evidence",
+      "type": "array"
+    },
+    "notes": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Notes",
+      "type": "array"
+    },
+    "outcome": {
+      "$ref": "#/$defs/OutcomeStatus"
+    },
+    "run_condition": {
+      "$ref": "#/$defs/RunCondition"
+    },
+    "run_stack": {
+      "$ref": "#/$defs/RunStack"
+    },
+    "stderr": {
+      "default": "",
+      "title": "Stderr",
+      "type": "string"
+    },
+    "stdout": {
+      "default": "",
+      "title": "Stdout",
+      "type": "string"
+    },
+    "task_id": {
+      "title": "Task Id",
+      "type": "string"
+    },
+    "usage": {
+      "$ref": "#/$defs/UsageRecord"
+    }
+  },
+  "required": [
+    "task_id",
+    "family_id",
+    "form_id",
+    "instrument",
+    "execution_pack_sha256",
+    "run_stack",
+    "run_condition",
+    "outcome",
+    "events",
+    "artifacts",
+    "usage"
+  ],
+  "title": "WorkResultBundle",
+  "type": "object"
+}

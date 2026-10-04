@@ -1,0 +1,23 @@
+criteria:
+  - criterion_id: brief-adherence
+    verdict: reject
+    score: 1.0
+    confidence: 0.99
+    reason_codes: [wrong_story, omitted_required_material]
+    explanation: The candidate changes the identity and closing proposition while omitting required source and project obligations.
+    candidate_time_ranges: ["00:00-01:32"]
+    source_time_ranges: ["00:00:01-00:00:43"]
+    evidence_paths: [final-proxy.txt, timeline.json]
+  - criterion_id: editorial-coherence
+    verdict: reject
+    score: 1.5
+    confidence: 0.95
+    reason_codes: [weak_progression, unmotivated_b_roll]
+    explanation: The candidate contains one quote, no b-roll cues, and no coherent progression toward the requested close.
+    candidate_time_ranges: ["00:00-01:32"]
+    source_time_ranges: ["00:00:01-00:00:43"]
+    evidence_paths: [final-proxy.txt, timeline.json]
+panel_disagreement: {}
+raw_judgments:
+  - source: frozen_demo_anchor
+    note: Controlled instrument-validation judgment, not a professional editor rating.

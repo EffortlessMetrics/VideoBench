@@ -1,0 +1,133 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "active_agent_seconds": {
+      "default": 0.0,
+      "minimum": 0.0,
+      "title": "Active Agent Seconds",
+      "type": "number"
+    },
+    "actual_candidate_cost_usd": {
+      "anyOf": [
+        {
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Actual Candidate Cost Usd"
+    },
+    "cache_write_tokens": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Cache Write Tokens",
+      "type": "integer"
+    },
+    "cached_input_tokens": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Cached Input Tokens",
+      "type": "integer"
+    },
+    "compaction_events": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Compaction Events",
+      "type": "integer"
+    },
+    "human_interventions": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Human Interventions",
+      "type": "integer"
+    },
+    "human_seconds": {
+      "default": 0.0,
+      "minimum": 0.0,
+      "title": "Human Seconds",
+      "type": "number"
+    },
+    "image_units": {
+      "default": 0.0,
+      "minimum": 0.0,
+      "title": "Image Units",
+      "type": "number"
+    },
+    "input_tokens": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Input Tokens",
+      "type": "integer"
+    },
+    "metadata": {
+      "additionalProperties": true,
+      "title": "Metadata",
+      "type": "object"
+    },
+    "model_calls": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Model Calls",
+      "type": "integer"
+    },
+    "model_retries": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Model Retries",
+      "type": "integer"
+    },
+    "output_tokens": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Output Tokens",
+      "type": "integer"
+    },
+    "reasoning_tokens": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Reasoning Tokens",
+      "type": "integer"
+    },
+    "render_seconds": {
+      "default": 0.0,
+      "minimum": 0.0,
+      "title": "Render Seconds",
+      "type": "number"
+    },
+    "resolve_processing_seconds": {
+      "default": 0.0,
+      "minimum": 0.0,
+      "title": "Resolve Processing Seconds",
+      "type": "number"
+    },
+    "tool_calls": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Tool Calls",
+      "type": "integer"
+    },
+    "transport_retries": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Transport Retries",
+      "type": "integer"
+    },
+    "video_units": {
+      "default": 0.0,
+      "minimum": 0.0,
+      "title": "Video Units",
+      "type": "number"
+    },
+    "wall_seconds": {
+      "default": 0.0,
+      "minimum": 0.0,
+      "title": "Wall Seconds",
+      "type": "number"
+    }
+  },
+  "title": "UsageRecord",
+  "type": "object"
+}

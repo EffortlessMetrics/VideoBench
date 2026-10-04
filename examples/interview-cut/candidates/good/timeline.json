@@ -1,0 +1,24 @@
+{
+  "timeline": {
+    "aspect_ratio": "16:9",
+    "duration_seconds": 61.5,
+    "quote_count": 3,
+    "b_roll_cues": 2,
+    "captions_present": true,
+    "lower_third": {
+      "text": "Alex Rivera — Editor",
+      "start_seconds": 2.0,
+      "end_seconds": 6.0
+    },
+    "closing_card": "Measure accepted work"
+  },
+  "project": {
+    "editable": true,
+    "source_media_online": true,
+    "source_clip_ids": ["A001", "B001", "B002"]
+  },
+  "audio": {
+    "dialogue_lufs": -16.0,
+    "true_peak_dbfs": -1.0
+  }
+}

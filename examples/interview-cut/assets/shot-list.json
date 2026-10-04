@@ -1,0 +1,7 @@
+{
+  "shots": [
+    {"id": "A001", "kind": "interview", "speaker": "Alex", "duration_seconds": 52},
+    {"id": "B001", "kind": "b_roll", "description": "editor trimming a timeline", "duration_seconds": 12},
+    {"id": "B002", "kind": "b_roll", "description": "project reopening with media online", "duration_seconds": 9}
+  ]
+}

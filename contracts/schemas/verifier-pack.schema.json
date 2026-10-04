@@ -1,0 +1,192 @@
+{
+  "$defs": {
+    "AcceptancePolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "reject_on_fatal_semantic_failure": {
+          "default": true,
+          "title": "Reject On Fatal Semantic Failure",
+          "type": "boolean"
+        },
+        "require_all_fatal_checks": {
+          "default": true,
+          "title": "Require All Fatal Checks",
+          "type": "boolean"
+        },
+        "require_semantic_acceptance": {
+          "default": true,
+          "title": "Require Semantic Acceptance",
+          "type": "boolean"
+        },
+        "require_valid_artifact": {
+          "default": true,
+          "title": "Require Valid Artifact",
+          "type": "boolean"
+        }
+      },
+      "title": "AcceptancePolicy",
+      "type": "object"
+    },
+    "CheckSeverity": {
+      "enum": [
+        "fatal",
+        "major",
+        "advisory"
+      ],
+      "title": "CheckSeverity",
+      "type": "string"
+    },
+    "CheckType": {
+      "enum": [
+        "artifact_exists",
+        "artifact_count_at_least",
+        "file_sha256_equals",
+        "text_contains",
+        "json_path_equals",
+        "json_path_in",
+        "json_path_at_least",
+        "json_path_at_most",
+        "media_property_equals"
+      ],
+      "title": "CheckType",
+      "type": "string"
+    },
+    "Confidentiality": {
+      "enum": [
+        "public",
+        "controlled",
+        "private_canary",
+        "retired_audit"
+      ],
+      "title": "Confidentiality",
+      "type": "string"
+    },
+    "Instrument": {
+      "enum": [
+        "surface_conformance",
+        "execution_core",
+        "editorial_core",
+        "project_field",
+        "revision_recovery",
+        "judge_qualification"
+      ],
+      "title": "Instrument",
+      "type": "string"
+    },
+    "ObjectiveCheckSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Artifact Path"
+        },
+        "check_id": {
+          "title": "Check Id",
+          "type": "string"
+        },
+        "check_type": {
+          "$ref": "#/$defs/CheckType"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "expected": {
+          "default": null,
+          "title": "Expected"
+        },
+        "json_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Json Path"
+        },
+        "reason_code": {
+          "title": "Reason Code",
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/$defs/CheckSeverity",
+          "default": "fatal"
+        }
+      },
+      "required": [
+        "check_id",
+        "check_type",
+        "description",
+        "reason_code"
+      ],
+      "title": "ObjectiveCheckSpec",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "acceptance_policy": {
+      "$ref": "#/$defs/AcceptancePolicy"
+    },
+    "confidentiality": {
+      "$ref": "#/$defs/Confidentiality",
+      "default": "public"
+    },
+    "execution_pack_sha256": {
+      "title": "Execution Pack Sha256",
+      "type": "string"
+    },
+    "family_id": {
+      "title": "Family Id",
+      "type": "string"
+    },
+    "form_id": {
+      "title": "Form Id",
+      "type": "string"
+    },
+    "hidden_obligations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Hidden Obligations",
+      "type": "array"
+    },
+    "instrument": {
+      "$ref": "#/$defs/Instrument"
+    },
+    "objective_checks": {
+      "items": {
+        "$ref": "#/$defs/ObjectiveCheckSpec"
+      },
+      "title": "Objective Checks",
+      "type": "array"
+    },
+    "task_id": {
+      "title": "Task Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "task_id",
+    "family_id",
+    "form_id",
+    "instrument",
+    "execution_pack_sha256",
+    "hidden_obligations",
+    "objective_checks",
+    "acceptance_policy"
+  ],
+  "title": "VerifierPack",
+  "type": "object"
+}

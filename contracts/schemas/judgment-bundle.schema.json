@@ -1,0 +1,444 @@
+{
+  "$defs": {
+    "AcceptancePolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "reject_on_fatal_semantic_failure": {
+          "default": true,
+          "title": "Reject On Fatal Semantic Failure",
+          "type": "boolean"
+        },
+        "require_all_fatal_checks": {
+          "default": true,
+          "title": "Require All Fatal Checks",
+          "type": "boolean"
+        },
+        "require_semantic_acceptance": {
+          "default": true,
+          "title": "Require Semantic Acceptance",
+          "type": "boolean"
+        },
+        "require_valid_artifact": {
+          "default": true,
+          "title": "Require Valid Artifact",
+          "type": "boolean"
+        }
+      },
+      "title": "AcceptancePolicy",
+      "type": "object"
+    },
+    "CriterionJudgment": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_time_ranges": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Candidate Time Ranges",
+          "type": "array"
+        },
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "criterion_id": {
+          "title": "Criterion Id",
+          "type": "string"
+        },
+        "evidence_paths": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Paths",
+          "type": "array"
+        },
+        "explanation": {
+          "title": "Explanation",
+          "type": "string"
+        },
+        "reason_codes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Reason Codes",
+          "type": "array"
+        },
+        "score": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Score"
+        },
+        "source_time_ranges": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Time Ranges",
+          "type": "array"
+        },
+        "verdict": {
+          "$ref": "#/$defs/JudgmentVerdict"
+        }
+      },
+      "required": [
+        "criterion_id",
+        "verdict",
+        "confidence",
+        "explanation"
+      ],
+      "title": "CriterionJudgment",
+      "type": "object"
+    },
+    "Instrument": {
+      "enum": [
+        "surface_conformance",
+        "execution_core",
+        "editorial_core",
+        "project_field",
+        "revision_recovery",
+        "judge_qualification"
+      ],
+      "title": "Instrument",
+      "type": "string"
+    },
+    "JudgeEvidenceTransform": {
+      "additionalProperties": false,
+      "properties": {
+        "audio_policy": {
+          "additionalProperties": true,
+          "title": "Audio Policy",
+          "type": "object"
+        },
+        "chunking": {
+          "additionalProperties": true,
+          "title": "Chunking",
+          "type": "object"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "frame_sampling": {
+          "additionalProperties": true,
+          "title": "Frame Sampling",
+          "type": "object"
+        },
+        "known_blind_spots": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Known Blind Spots",
+          "type": "array"
+        },
+        "source_context_policy": {
+          "additionalProperties": true,
+          "title": "Source Context Policy",
+          "type": "object"
+        },
+        "transcript_policy": {
+          "additionalProperties": true,
+          "title": "Transcript Policy",
+          "type": "object"
+        },
+        "transform_id": {
+          "title": "Transform Id",
+          "type": "string"
+        },
+        "video_proxy": {
+          "additionalProperties": true,
+          "title": "Video Proxy",
+          "type": "object"
+        }
+      },
+      "required": [
+        "transform_id",
+        "description"
+      ],
+      "title": "JudgeEvidenceTransform",
+      "type": "object"
+    },
+    "JudgeIdentity": {
+      "additionalProperties": false,
+      "properties": {
+        "model": {
+          "title": "Model",
+          "type": "string"
+        },
+        "prompt_version": {
+          "title": "Prompt Version",
+          "type": "string"
+        },
+        "provider": {
+          "title": "Provider",
+          "type": "string"
+        },
+        "snapshot": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Snapshot"
+        }
+      },
+      "required": [
+        "provider",
+        "model",
+        "prompt_version"
+      ],
+      "title": "JudgeIdentity",
+      "type": "object"
+    },
+    "JudgeStack": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_transform": {
+          "$ref": "#/$defs/JudgeEvidenceTransform"
+        },
+        "judge_stack_id": {
+          "title": "Judge Stack Id",
+          "type": "string"
+        },
+        "judges": {
+          "items": {
+            "$ref": "#/$defs/JudgeIdentity"
+          },
+          "minItems": 1,
+          "title": "Judges",
+          "type": "array"
+        },
+        "known_unknowns": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Known Unknowns",
+          "type": "array"
+        },
+        "panel_policy": {
+          "title": "Panel Policy",
+          "type": "string"
+        },
+        "qualification_receipts": {
+          "items": {
+            "$ref": "#/$defs/QualificationReceipt"
+          },
+          "title": "Qualification Receipts",
+          "type": "array"
+        }
+      },
+      "required": [
+        "judge_stack_id",
+        "judges",
+        "evidence_transform",
+        "panel_policy"
+      ],
+      "title": "JudgeStack",
+      "type": "object"
+    },
+    "JudgmentVerdict": {
+      "enum": [
+        "accept",
+        "reject",
+        "indeterminate",
+        "insufficient_basis"
+      ],
+      "title": "JudgmentVerdict",
+      "type": "string"
+    },
+    "QualificationReceipt": {
+      "additionalProperties": false,
+      "properties": {
+        "anchor_accuracy": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Anchor Accuracy",
+          "type": "number"
+        },
+        "eligible_criteria": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Eligible Criteria",
+          "type": "array"
+        },
+        "judge_configuration_sha256": {
+          "title": "Judge Configuration Sha256",
+          "type": "string"
+        },
+        "judge_stack_id": {
+          "title": "Judge Stack Id",
+          "type": "string"
+        },
+        "mutant_discrimination": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Mutant Discrimination",
+          "type": "number"
+        },
+        "notes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Notes",
+          "type": "array"
+        },
+        "order_bias_rate": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Order Bias Rate"
+        },
+        "prompt_injection_failure_rate": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Prompt Injection Failure Rate"
+        },
+        "qualification_id": {
+          "title": "Qualification Id",
+          "type": "string"
+        },
+        "qualification_pack_sha256": {
+          "title": "Qualification Pack Sha256",
+          "type": "string"
+        },
+        "valid_from": {
+          "format": "date-time",
+          "title": "Valid From",
+          "type": "string"
+        },
+        "valid_until": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Valid Until"
+        }
+      },
+      "required": [
+        "qualification_id",
+        "qualification_pack_sha256",
+        "judge_stack_id",
+        "judge_configuration_sha256",
+        "eligible_criteria",
+        "anchor_accuracy",
+        "mutant_discrimination"
+      ],
+      "title": "QualificationReceipt",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "acceptance_policy": {
+      "$ref": "#/$defs/AcceptancePolicy"
+    },
+    "attempt_id": {
+      "title": "Attempt Id",
+      "type": "string"
+    },
+    "criteria": {
+      "items": {
+        "$ref": "#/$defs/CriterionJudgment"
+      },
+      "title": "Criteria",
+      "type": "array"
+    },
+    "family_id": {
+      "title": "Family Id",
+      "type": "string"
+    },
+    "fatal_semantic_failure": {
+      "default": false,
+      "title": "Fatal Semantic Failure",
+      "type": "boolean"
+    },
+    "form_id": {
+      "title": "Form Id",
+      "type": "string"
+    },
+    "instrument": {
+      "$ref": "#/$defs/Instrument"
+    },
+    "judge_pack_sha256": {
+      "title": "Judge Pack Sha256",
+      "type": "string"
+    },
+    "judge_stack": {
+      "$ref": "#/$defs/JudgeStack"
+    },
+    "overall_verdict": {
+      "$ref": "#/$defs/JudgmentVerdict"
+    },
+    "panel_disagreement": {
+      "additionalProperties": true,
+      "title": "Panel Disagreement",
+      "type": "object"
+    },
+    "raw_judgments": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Raw Judgments",
+      "type": "array"
+    },
+    "task_id": {
+      "title": "Task Id",
+      "type": "string"
+    },
+    "work_result_sha256": {
+      "title": "Work Result Sha256",
+      "type": "string"
+    }
+  },
+  "required": [
+    "task_id",
+    "family_id",
+    "form_id",
+    "instrument",
+    "attempt_id",
+    "work_result_sha256",
+    "judge_pack_sha256",
+    "acceptance_policy",
+    "judge_stack",
+    "criteria",
+    "overall_verdict"
+  ],
+  "title": "JudgmentBundle",
+  "type": "object"
+}

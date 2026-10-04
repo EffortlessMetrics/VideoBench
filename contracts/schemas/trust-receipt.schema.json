@@ -1,0 +1,87 @@
+{
+  "$defs": {
+    "ArtifactValidity": {
+      "enum": [
+        "valid",
+        "invalid",
+        "contested",
+        "instrument_failure",
+        "not_proven"
+      ],
+      "title": "ArtifactValidity",
+      "type": "string"
+    },
+    "ComparabilityStatus": {
+      "enum": [
+        "directly_comparable",
+        "diagnostically_comparable",
+        "valid_non_comparable"
+      ],
+      "title": "ComparabilityStatus",
+      "type": "string"
+    },
+    "Confidentiality": {
+      "enum": [
+        "public",
+        "controlled",
+        "private_canary",
+        "retired_audit"
+      ],
+      "title": "Confidentiality",
+      "type": "string"
+    },
+    "JudgmentStatus": {
+      "enum": [
+        "unjudged",
+        "self_judged",
+        "qualified_panel_judged",
+        "human_adjudicated"
+      ],
+      "title": "JudgmentStatus",
+      "type": "string"
+    },
+    "ProvenanceStatus": {
+      "enum": [
+        "self_submitted",
+        "peer_reproduced",
+        "official_reproduced",
+        "official_hosted",
+        "attested_environment"
+      ],
+      "title": "ProvenanceStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "artifact_validity": {
+      "$ref": "#/$defs/ArtifactValidity",
+      "default": "not_proven"
+    },
+    "comparability": {
+      "$ref": "#/$defs/ComparabilityStatus",
+      "default": "valid_non_comparable"
+    },
+    "confidentiality": {
+      "$ref": "#/$defs/Confidentiality",
+      "default": "public"
+    },
+    "evidence_refs": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Evidence Refs",
+      "type": "array"
+    },
+    "judgment_status": {
+      "$ref": "#/$defs/JudgmentStatus",
+      "default": "unjudged"
+    },
+    "provenance": {
+      "$ref": "#/$defs/ProvenanceStatus",
+      "default": "self_submitted"
+    }
+  },
+  "title": "TrustReceipt",
+  "type": "object"
+}

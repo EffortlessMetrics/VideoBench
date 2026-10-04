@@ -1,0 +1,32 @@
+stack_id: mock-good
+system:
+  provider: synthetic
+  model: mock-editor-good
+  snapshot: v1
+  product_surface: frozen-candidate
+surface:
+  observation_surface: manual
+  action_surface: manual
+  media_analysis_surface: manual
+  verification_access: none
+  tool_granularity: frozen-output
+  allowed_external_tools: []
+  network_policy: offline
+harness:
+  harness: videobench-mock
+  version: 0.1.0
+  prompt_policy: frozen
+  context_policy: frozen
+  memory_policy: none
+  orchestration_policy: single_agent
+resource_envelope:
+  max_wall_seconds: 30
+  max_model_calls: 1
+  max_tool_calls: 10
+operator_policy: autonomous
+environment:
+  operating_system: synthetic
+  resolve_version: synthetic
+  resolve_edition: synthetic
+  machine_id: public-demo
+known_unknowns: []

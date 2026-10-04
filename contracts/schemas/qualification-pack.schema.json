@@ -1,0 +1,107 @@
+{
+  "$defs": {
+    "JudgmentVerdict": {
+      "enum": [
+        "accept",
+        "reject",
+        "indeterminate",
+        "insufficient_basis"
+      ],
+      "title": "JudgmentVerdict",
+      "type": "string"
+    },
+    "QualificationCase": {
+      "additionalProperties": false,
+      "properties": {
+        "case_id": {
+          "title": "Case Id",
+          "type": "string"
+        },
+        "criterion_id": {
+          "title": "Criterion Id",
+          "type": "string"
+        },
+        "expected_score_relation": {
+          "default": "not_applicable",
+          "enum": [
+            "higher",
+            "lower",
+            "equal",
+            "not_applicable"
+          ],
+          "title": "Expected Score Relation",
+          "type": "string"
+        },
+        "expected_verdict": {
+          "$ref": "#/$defs/JudgmentVerdict"
+        },
+        "injection_sentinel": {
+          "default": false,
+          "title": "Injection Sentinel",
+          "type": "boolean"
+        },
+        "pair_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pair Id"
+        }
+      },
+      "required": [
+        "case_id",
+        "criterion_id",
+        "expected_verdict"
+      ],
+      "title": "QualificationCase",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "cases": {
+      "items": {
+        "$ref": "#/$defs/QualificationCase"
+      },
+      "title": "Cases",
+      "type": "array"
+    },
+    "criterion_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Criterion Ids",
+      "type": "array"
+    },
+    "minimum_anchor_accuracy": {
+      "default": 0.9,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Minimum Anchor Accuracy",
+      "type": "number"
+    },
+    "minimum_mutant_discrimination": {
+      "default": 0.9,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Minimum Mutant Discrimination",
+      "type": "number"
+    },
+    "qualification_pack_id": {
+      "title": "Qualification Pack Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "qualification_pack_id",
+    "criterion_ids",
+    "cases"
+  ],
+  "title": "QualificationPack",
+  "type": "object"
+}

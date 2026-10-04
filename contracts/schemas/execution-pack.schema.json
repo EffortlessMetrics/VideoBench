@@ -1,0 +1,232 @@
+{
+  "$defs": {
+    "AssetSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "asset_id": {
+          "title": "Asset Id",
+          "type": "string"
+        },
+        "media_type": {
+          "$ref": "#/$defs/MediaType"
+        },
+        "metadata": {
+          "additionalProperties": true,
+          "title": "Metadata",
+          "type": "object"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "public_eligible": {
+          "default": false,
+          "title": "Public Eligible",
+          "type": "boolean"
+        },
+        "role": {
+          "title": "Role",
+          "type": "string"
+        },
+        "sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sha256"
+        }
+      },
+      "required": [
+        "asset_id",
+        "path",
+        "media_type",
+        "role"
+      ],
+      "title": "AssetSpec",
+      "type": "object"
+    },
+    "Confidentiality": {
+      "enum": [
+        "public",
+        "controlled",
+        "private_canary",
+        "retired_audit"
+      ],
+      "title": "Confidentiality",
+      "type": "string"
+    },
+    "DeliverableSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "deliverable_id": {
+          "title": "Deliverable Id",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "editable": {
+          "default": false,
+          "title": "Editable",
+          "type": "boolean"
+        },
+        "media_type": {
+          "$ref": "#/$defs/MediaType"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "required": {
+          "default": true,
+          "title": "Required",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "deliverable_id",
+        "path",
+        "media_type",
+        "description"
+      ],
+      "title": "DeliverableSpec",
+      "type": "object"
+    },
+    "Instrument": {
+      "enum": [
+        "surface_conformance",
+        "execution_core",
+        "editorial_core",
+        "project_field",
+        "revision_recovery",
+        "judge_qualification"
+      ],
+      "title": "Instrument",
+      "type": "string"
+    },
+    "MediaType": {
+      "enum": [
+        "video",
+        "audio",
+        "image",
+        "project",
+        "timeline",
+        "transcript",
+        "caption",
+        "data",
+        "other"
+      ],
+      "title": "MediaType",
+      "type": "string"
+    },
+    "OutputContract": {
+      "additionalProperties": false,
+      "properties": {
+        "deliverables": {
+          "items": {
+            "$ref": "#/$defs/DeliverableSpec"
+          },
+          "title": "Deliverables",
+          "type": "array"
+        },
+        "prohibited_shortcuts": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Prohibited Shortcuts",
+          "type": "array"
+        },
+        "protected_invariants": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Protected Invariants",
+          "type": "array"
+        },
+        "requirements": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Requirements",
+          "type": "array"
+        }
+      },
+      "required": [
+        "deliverables"
+      ],
+      "title": "OutputContract",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "assets": {
+      "items": {
+        "$ref": "#/$defs/AssetSpec"
+      },
+      "title": "Assets",
+      "type": "array"
+    },
+    "brief": {
+      "title": "Brief",
+      "type": "string"
+    },
+    "confidentiality": {
+      "$ref": "#/$defs/Confidentiality",
+      "default": "public"
+    },
+    "family_id": {
+      "title": "Family Id",
+      "type": "string"
+    },
+    "form_id": {
+      "title": "Form Id",
+      "type": "string"
+    },
+    "instrument": {
+      "$ref": "#/$defs/Instrument"
+    },
+    "metadata": {
+      "additionalProperties": true,
+      "title": "Metadata",
+      "type": "object"
+    },
+    "output_contract": {
+      "$ref": "#/$defs/OutputContract"
+    },
+    "public_constraints": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Public Constraints",
+      "type": "array"
+    },
+    "task_id": {
+      "title": "Task Id",
+      "type": "string"
+    },
+    "title": {
+      "title": "Title",
+      "type": "string"
+    }
+  },
+  "required": [
+    "task_id",
+    "family_id",
+    "form_id",
+    "title",
+    "instrument",
+    "brief",
+    "assets",
+    "output_contract",
+    "public_constraints"
+  ],
+  "title": "ExecutionPack",
+  "type": "object"
+}

@@ -1,0 +1,43 @@
+name: Bug report
+description: Report incorrect protocol, runner, verifier, judge, analysis, or CLI behavior
+title: "bug: "
+body:
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Surface
+      options:
+        - Compiler / contracts
+        - Runner / capture
+        - Verifier
+        - Judge / qualification
+        - Scoring / economics
+        - Resolve / media adapter
+        - CLI / documentation
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behavior
+      description: Include the smallest reproducible evidence and relevant artifact IDs.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: receipts
+    attributes:
+      label: Receipts
+      description: RunStack, form, attempt, environment, logs, or bundle hashes. Remove secrets and private assets.
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety
+      options:
+        - label: I removed credentials, private source material, and restricted model output.
+          required: true

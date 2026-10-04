@@ -1,0 +1,100 @@
+{
+  "$defs": {
+    "TokenPricing": {
+      "additionalProperties": false,
+      "properties": {
+        "cache_write_per_million_usd": {
+          "default": 0.0,
+          "minimum": 0.0,
+          "title": "Cache Write Per Million Usd",
+          "type": "number"
+        },
+        "cached_input_per_million_usd": {
+          "default": 0.0,
+          "minimum": 0.0,
+          "title": "Cached Input Per Million Usd",
+          "type": "number"
+        },
+        "image_unit_usd": {
+          "default": 0.0,
+          "minimum": 0.0,
+          "title": "Image Unit Usd",
+          "type": "number"
+        },
+        "input_per_million_usd": {
+          "default": 0.0,
+          "minimum": 0.0,
+          "title": "Input Per Million Usd",
+          "type": "number"
+        },
+        "output_per_million_usd": {
+          "default": 0.0,
+          "minimum": 0.0,
+          "title": "Output Per Million Usd",
+          "type": "number"
+        },
+        "per_call_usd": {
+          "default": 0.0,
+          "minimum": 0.0,
+          "title": "Per Call Usd",
+          "type": "number"
+        },
+        "reasoning_per_million_usd": {
+          "default": 0.0,
+          "minimum": 0.0,
+          "title": "Reasoning Per Million Usd",
+          "type": "number"
+        },
+        "video_unit_usd": {
+          "default": 0.0,
+          "minimum": 0.0,
+          "title": "Video Unit Usd",
+          "type": "number"
+        }
+      },
+      "title": "TokenPricing",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "currency": {
+      "default": "USD",
+      "title": "Currency",
+      "type": "string"
+    },
+    "effective_date": {
+      "title": "Effective Date",
+      "type": "string"
+    },
+    "model": {
+      "title": "Model",
+      "type": "string"
+    },
+    "policy_id": {
+      "title": "Policy Id",
+      "type": "string"
+    },
+    "pricing": {
+      "$ref": "#/$defs/TokenPricing"
+    },
+    "provider": {
+      "title": "Provider",
+      "type": "string"
+    },
+    "source_note": {
+      "title": "Source Note",
+      "type": "string"
+    }
+  },
+  "required": [
+    "policy_id",
+    "effective_date",
+    "provider",
+    "model",
+    "pricing",
+    "source_note"
+  ],
+  "title": "PricingPolicy",
+  "type": "object"
+}

@@ -1,0 +1,58 @@
+{
+  "$defs": {
+    "RecoveryPolicy": {
+      "enum": [
+        "none",
+        "scripted",
+        "adaptive"
+      ],
+      "title": "RecoveryPolicy",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "attempt_id": {
+      "title": "Attempt Id",
+      "type": "string"
+    },
+    "clean_state_id": {
+      "title": "Clean State Id",
+      "type": "string"
+    },
+    "recovery_policy": {
+      "$ref": "#/$defs/RecoveryPolicy",
+      "default": "none"
+    },
+    "seed": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Seed"
+    },
+    "started_at": {
+      "format": "date-time",
+      "title": "Started At",
+      "type": "string"
+    },
+    "tags": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Tags",
+      "type": "array"
+    }
+  },
+  "required": [
+    "attempt_id",
+    "clean_state_id"
+  ],
+  "title": "RunCondition",
+  "type": "object"
+}

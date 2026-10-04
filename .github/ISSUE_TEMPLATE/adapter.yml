@@ -1,0 +1,29 @@
+name: Adapter or capability mapping
+description: Propose a Resolve, MCP, GUI, model, judge, media, or artifact-store adapter
+title: "adapter: "
+body:
+  - type: input
+    id: system
+    attributes:
+      label: External system and version
+    validations:
+      required: true
+  - type: textarea
+    id: boundary
+    attributes:
+      label: Protocol boundary
+      description: Which existing port does this implement? Explain any proposed contract change.
+    validations:
+      required: true
+  - type: textarea
+    id: capabilities
+    attributes:
+      label: Semantic capabilities and unsupported cases
+    validations:
+      required: true
+  - type: textarea
+    id: receipts
+    attributes:
+      label: Raw receipts and independent verification plan
+    validations:
+      required: true
