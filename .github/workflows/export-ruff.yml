@@ -1,0 +1,26 @@
+name: Export CI Ruff binary
+
+on:
+  push:
+    branches: [work/mcp-capability-surface]
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - name: Install exact formatter
+        run: python -m pip install 'ruff==0.16.10'
+      - name: Stage binary
+        run: cp "$(command -v ruff)" /tmp/ruff
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ruff-linux-x86_64-0.16.10
+          path: /tmp/ruff
+          if-no-files-found: error
+          retention-days: 1
