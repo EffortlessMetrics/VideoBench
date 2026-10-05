@@ -1,0 +1,34 @@
+name: Apply live qualification foundation
+
+on:
+  push:
+    branches: [feat/live-qualification-foundation]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.head_commit.message == 'chore: stage live qualification patch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Verify and apply preserved patch
+        run: |
+          set -euo pipefail
+          cat bootstrap/live-qualification.part-* > /tmp/live-qualification.patch.b64
+          test "$(wc -c < /tmp/live-qualification.patch.b64)" = "46020"
+          echo "9b806df951bf98b72f8ea2827691afcdb6534ce9b144fd3830d32ea72d9aaab1  /tmp/live-qualification.patch.b64" | sha256sum -c -
+          base64 --decode /tmp/live-qualification.patch.b64 | gzip --decompress > /tmp/live-qualification.patch
+          echo "03110780b7fd65f9fe7618c09cf4aa1957f68ecf3c1e8e87732c6ddb6257daaf  /tmp/live-qualification.patch" | sha256sum -c -
+          git apply --index --binary --whitespace=error-all /tmp/live-qualification.patch
+          git rm .github/workflows/apply-live-qualification.yml
+          git rm -r bootstrap
+          git config user.name "EffortlessSteven"
+          git config user.email "15812269+EffortlessSteven@users.noreply.github.com"
+          git commit -m "feat: add live MCP qualification foundation"
+          git push origin HEAD:${GITHUB_REF_NAME}
