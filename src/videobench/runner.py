@@ -124,7 +124,7 @@ def load_usage(path: Path | None) -> UsageRecord:
 
 def _budget_failures(
     envelope: ResourceEnvelope, usage: UsageRecord
-) -> tuple[list[dict[str, float | int]], list[str]]:
+) -> tuple[list[dict[str, str | float | int]], list[str]]:
     comparisons: list[tuple[str, float | int | None, float | int | None]] = [
         ("wall_seconds", envelope.max_wall_seconds, usage.wall_seconds),
         ("model_calls", envelope.max_model_calls, usage.model_calls),
@@ -132,7 +132,7 @@ def _budget_failures(
         ("input_tokens", envelope.max_input_tokens, usage.input_tokens),
         ("output_tokens", envelope.max_output_tokens, usage.output_tokens),
     ]
-    failures: list[dict[str, float | int]] = []
+    failures: list[dict[str, str | float | int]] = []
     missing: list[str] = []
     for name, limit, actual in comparisons:
         if limit is None:

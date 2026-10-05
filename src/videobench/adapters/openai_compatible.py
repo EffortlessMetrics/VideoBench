@@ -701,7 +701,11 @@ def _parse_responses_output(payload: Mapping[str, Any]) -> tuple[str, list[dict[
             name = item.get("name")
             arguments = item.get("arguments")
             call_id = item.get("call_id") or item.get("id")
-            if not all(isinstance(value, str) for value in (name, arguments, call_id)):
+            if (
+                not isinstance(name, str)
+                or not isinstance(arguments, str)
+                or not isinstance(call_id, str)
+            ):
                 raise ProviderProtocolError("Malformed Responses function call")
             calls.append({"name": name, "arguments": arguments, "call_id": call_id})
         elif item_type == "message":
@@ -925,8 +929,8 @@ def _remaining_wall_seconds(start: float, run_stack: RunStack) -> float | None:
 
 def _token_budget_failures(
     usage: Mapping[str, int | None], run_stack: RunStack
-) -> list[dict[str, int]]:
-    failures: list[dict[str, int]] = []
+) -> list[dict[str, str | int]]:
+    failures: list[dict[str, str | int]] = []
     for resource, limit, actual in (
         ("input_tokens", run_stack.resource_envelope.max_input_tokens, usage["input_tokens"]),
         (
@@ -1381,7 +1385,11 @@ def execute_openai_compatible(
     )
     known_missing = sorted(set(known_missing))
     usage = UsageRecord(
-        **usage_values,
+        input_tokens=usage_values["input_tokens"],
+        cached_input_tokens=usage_values["cached_input_tokens"],
+        cache_write_tokens=usage_values["cache_write_tokens"],
+        reasoning_tokens=usage_values["reasoning_tokens"],
+        output_tokens=usage_values["output_tokens"],
         image_units=None,
         video_units=None,
         model_calls=logical_calls,

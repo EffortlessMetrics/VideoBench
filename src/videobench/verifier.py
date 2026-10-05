@@ -9,6 +9,7 @@ from typing import Any
 from videobench.canonical import path_sha256, resolve_under_root, sha256_hex
 from videobench.contracts import (
     CheckResult,
+    CheckType,
     ObjectiveCheckSpec,
     VerificationBundle,
     VerifierPack,
@@ -86,12 +87,12 @@ def evaluate_check(check: ObjectiveCheckSpec, artifact_root: Path) -> CheckResul
                     raise ValueError(f"Symbolic links are not valid evidence: {item}")
                 if item.is_file():
                     count += 1
-            expected = int(check.expected)
+            minimum_count = int(check.expected)
             return _result(
                 check,
-                CheckStatus.PASS if count >= expected else CheckStatus.FAIL,
+                CheckStatus.PASS if count >= minimum_count else CheckStatus.FAIL,
                 actual=count,
-                expected=expected,
+                expected=minimum_count,
                 evidence_paths=[],
             )
 
@@ -121,11 +122,11 @@ def evaluate_check(check: ObjectiveCheckSpec, artifact_root: Path) -> CheckResul
 
         if check.check_type.value == "text_contains":
             text = path.read_text(encoding="utf-8")
-            expected = str(check.expected)
+            needle = str(check.expected)
             return _result(
                 check,
-                CheckStatus.PASS if expected in text else CheckStatus.FAIL,
-                actual=expected in text,
+                CheckStatus.PASS if needle in text else CheckStatus.FAIL,
+                actual=needle in text,
             )
 
         if (
@@ -178,7 +179,7 @@ def verify_capture_integrity(
     for artifact in result.artifacts:
         check = ObjectiveCheckSpec(
             check_id=f"capture-integrity:{artifact.artifact_id}",
-            check_type="file_sha256_equals",
+            check_type=CheckType.FILE_SHA256_EQUALS,
             artifact_path=artifact.path,
             expected=artifact.sha256,
             severity=CheckSeverity.FATAL,
