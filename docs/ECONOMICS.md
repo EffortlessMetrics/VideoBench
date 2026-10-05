@@ -29,6 +29,10 @@ actual candidate cash cost
 
 These quantities are not interchangeable. They remain immutable run evidence.
 
+Provider-metered fields are nullable. `null` means the run did not establish the value;
+it never means zero. An evidenced zero and an unavailable receipt have different economic
+meaning and remain different wire states.
+
 ## PricingPolicy
 
 A versioned pricing policy maps raw usage into an API-equivalent list cost:
@@ -38,6 +42,10 @@ raw usage + frozen unit prices = list-equivalent candidate cost
 ```
 
 Old runs can be repriced under a new policy without rerunning the edit. Historical reports continue to reference the exact policy originally used.
+
+If a policy assigns a nonzero rate to an unavailable usage dimension, the projected total
+is unknown. Study reports therefore retain both mean cost over priced attempts and the
+number of attempts with sufficient pricing evidence.
 
 Provider-specific accounting varies. A pricing policy must state how reasoning, cached input, images, video, and per-call charges are treated rather than assuming all tokens share one price.
 

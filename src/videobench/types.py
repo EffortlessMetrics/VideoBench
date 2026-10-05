@@ -7,7 +7,7 @@ verifier, judge, and analysis modules rather than in a generic core namespace.
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -27,7 +27,7 @@ class StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid", validate_assignment=True, use_enum_values=False)
 
 
-class Instrument(str, Enum):
+class Instrument(StrEnum):
     SURFACE_CONFORMANCE = "surface_conformance"
     EXECUTION_CORE = "execution_core"
     EDITORIAL_CORE = "editorial_core"
@@ -36,7 +36,7 @@ class Instrument(str, Enum):
     JUDGE_QUALIFICATION = "judge_qualification"
 
 
-class SurfaceKind(str, Enum):
+class SurfaceKind(StrEnum):
     NONE = "none"
     MCP_COMPOUND = "mcp_compound"
     MCP_GRANULAR = "mcp_granular"
@@ -47,19 +47,19 @@ class SurfaceKind(str, Enum):
     HYBRID = "hybrid"
 
 
-class OperatorPolicy(str, Enum):
+class OperatorPolicy(StrEnum):
     AUTONOMOUS = "autonomous"
     SCRIPTED_COLLABORATION = "scripted_collaboration"
     EXPERT_OPERATED = "expert_operated"
 
 
-class RecoveryPolicy(str, Enum):
+class RecoveryPolicy(StrEnum):
     NONE = "none"
     SCRIPTED = "scripted"
     ADAPTIVE = "adaptive"
 
 
-class OutcomeStatus(str, Enum):
+class OutcomeStatus(StrEnum):
     PASS = "pass"
     FAIL_CANDIDATE = "fail_candidate"
     UNSUPPORTED_SURFACE = "unsupported_surface"
@@ -74,27 +74,27 @@ class OutcomeStatus(str, Enum):
     HUMAN_ABORT = "human_abort"
 
 
-class CheckSeverity(str, Enum):
+class CheckSeverity(StrEnum):
     FATAL = "fatal"
     MAJOR = "major"
     ADVISORY = "advisory"
 
 
-class CheckStatus(str, Enum):
+class CheckStatus(StrEnum):
     PASS = "pass"
     FAIL = "fail"
     NOT_OBSERVABLE = "not_observable"
     INSTRUMENT_FAILURE = "instrument_failure"
 
 
-class JudgmentVerdict(str, Enum):
+class JudgmentVerdict(StrEnum):
     ACCEPT = "accept"
     REJECT = "reject"
     INDETERMINATE = "indeterminate"
     INSUFFICIENT_BASIS = "insufficient_basis"
 
 
-class ProvenanceStatus(str, Enum):
+class ProvenanceStatus(StrEnum):
     SELF_SUBMITTED = "self_submitted"
     PEER_REPRODUCED = "peer_reproduced"
     OFFICIAL_REPRODUCED = "official_reproduced"
@@ -102,14 +102,14 @@ class ProvenanceStatus(str, Enum):
     ATTESTED_ENVIRONMENT = "attested_environment"
 
 
-class JudgmentStatus(str, Enum):
+class JudgmentStatus(StrEnum):
     UNJUDGED = "unjudged"
     SELF_JUDGED = "self_judged"
     QUALIFIED_PANEL_JUDGED = "qualified_panel_judged"
     HUMAN_ADJUDICATED = "human_adjudicated"
 
 
-class ArtifactValidity(str, Enum):
+class ArtifactValidity(StrEnum):
     VALID = "valid"
     INVALID = "invalid"
     CONTESTED = "contested"
@@ -117,13 +117,13 @@ class ArtifactValidity(str, Enum):
     NOT_PROVEN = "not_proven"
 
 
-class ComparabilityStatus(str, Enum):
+class ComparabilityStatus(StrEnum):
     DIRECTLY_COMPARABLE = "directly_comparable"
     DIAGNOSTICALLY_COMPARABLE = "diagnostically_comparable"
     VALID_NON_COMPARABLE = "valid_non_comparable"
 
 
-class Confidentiality(str, Enum):
+class Confidentiality(StrEnum):
     PUBLIC = "public"
     CONTROLLED = "controlled"
     PRIVATE_CANARY = "private_canary"

@@ -28,12 +28,26 @@
           "type": "number"
         },
         "mean_list_equivalent_cost_usd": {
-          "title": "Mean List Equivalent Cost Usd",
-          "type": "number"
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mean List Equivalent Cost Usd"
         },
         "mean_wall_seconds": {
           "title": "Mean Wall Seconds",
           "type": "number"
+        },
+        "priced_attempts": {
+          "minimum": 0,
+          "title": "Priced Attempts",
+          "type": "integer"
         },
         "stack_id": {
           "title": "Stack Id",
@@ -46,7 +60,7 @@
         "families",
         "accepted_work_rate",
         "family_macro_acceptance",
-        "mean_list_equivalent_cost_usd",
+        "priced_attempts",
         "mean_wall_seconds",
         "mean_human_seconds",
         "indeterminate_rate"

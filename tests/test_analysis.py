@@ -92,9 +92,7 @@ def _score(stack: str, family: str, accepted: bool, attempt: int = 1) -> ScoreVi
         hard_contract_pass=accepted,
         semantic_acceptance=accepted,
         criterion_scores={"c": 4.0 if accepted else 1.0},
-        criterion_verdicts={
-            "c": JudgmentVerdict.ACCEPT if accepted else JudgmentVerdict.REJECT
-        },
+        criterion_verdicts={"c": JudgmentVerdict.ACCEPT if accepted else JudgmentVerdict.REJECT},
         reason_codes=[],
         candidate_metered_cost_usd=None,
         candidate_list_equivalent_cost_usd=1.0,
@@ -193,3 +191,41 @@ def test_study_rejects_duplicate_attempt_evidence() -> None:
 
     with pytest.raises(ValueError, match="duplicate score views"):
         summarize_study(study, [score, score])
+
+
+def test_pricing_returns_unknown_when_priced_usage_is_missing() -> None:
+    policy = PricingPolicy(
+        policy_id="p-missing",
+        effective_date="2026-10-05",
+        provider="p",
+        model="m",
+        pricing=TokenPricing(input_per_million_usd=1.0),
+        source_note="test",
+    )
+    assert calculate_list_equivalent_cost(_result(UsageRecord(model_calls=1)), policy) is None
+
+
+def test_study_preserves_missing_economic_evidence() -> None:
+    study = StudySpec(
+        study_id="study-missing-cost",
+        title="missing economics",
+        instrument=Instrument.PROJECT_FIELD,
+        forms=[
+            StudyFormRef(
+                task_id="task-a",
+                family_id="a",
+                form_id="form",
+                execution_pack_sha256="0" * 64,
+            )
+        ],
+        stack_ids=["stack"],
+        attempts_per_form=1,
+        scoring_policy_id="s",
+        pricing_policy_id="p",
+    )
+    score = _score("stack", "a", True)
+    score.candidate_list_equivalent_cost_usd = None
+    summary = summarize_study(study, [score])
+    assert summary.summaries[0].priced_attempts == 0
+    assert summary.summaries[0].mean_list_equivalent_cost_usd is None
+    assert any("Incomplete economics" in note for note in summary.notes)

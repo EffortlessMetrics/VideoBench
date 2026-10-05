@@ -6,6 +6,7 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
+from videobench.adapters.openai_compatible import OpenAICompatibleConfig
 from videobench.contracts import (
     ExecutionPack,
     FormManifest,
@@ -41,6 +42,7 @@ SCHEMA_MODELS: dict[str, type[BaseModel]] = {
     "run-stack": RunStack,
     "run-condition": RunCondition,
     "usage-record": UsageRecord,
+    "openai-compatible-config": OpenAICompatibleConfig,
     "work-result-bundle": WorkResultBundle,
     "verification-bundle": VerificationBundle,
     "judge-stack": JudgeStack,

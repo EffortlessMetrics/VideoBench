@@ -30,9 +30,7 @@ def _evaluate(example_root: Path, tmp_path: Path, candidate: str):
     verifier = payload_as(compiled.verifier_pack, VerifierPack, expected_kind="verifier_pack")
     judge_pack = payload_as(compiled.judge_pack, JudgePack, expected_kind="judge_pack")
     stack = load_model(example_root / f"stacks/mock-{candidate}.yaml", RunStack)
-    condition = RunCondition(
-        attempt_id=f"test-{candidate}", clean_state_id="clean", seed=1
-    )
+    condition = RunCondition(attempt_id=f"test-{candidate}", clean_state_id="clean", seed=1)
     output = tmp_path / "artifacts" / candidate
     result = run_mock_candidate(
         execution_pack=execution,
@@ -49,9 +47,7 @@ def _evaluate(example_root: Path, tmp_path: Path, candidate: str):
             actual_candidate_cost_usd=0.01,
         ),
     )
-    verification = verify_result(
-        verifier_pack=verifier, result=result, artifact_root=output
-    )
+    verification = verify_result(verifier_pack=verifier, result=result, artifact_root=output)
     judge_stack = load_model(example_root / "policies/judge-stack.yaml", JudgeStack)
     qualification_pack = load_model(
         example_root / "policies/judge-qualification-pack.yaml", QualificationPack
@@ -60,9 +56,7 @@ def _evaluate(example_root: Path, tmp_path: Path, candidate: str):
         example_root / "policies/judge-qualification-run.yaml", QualificationRun
     )
     judge_stack.qualification_receipts = [
-        qualify_judge(
-            qualification_pack=qualification_pack, qualification_run=qualification_run
-        )
+        qualify_judge(qualification_pack=qualification_pack, qualification_run=qualification_run)
     ]
     judgment = import_judgment_file(
         path=example_root / f"judgments/{candidate}.yaml",
@@ -96,8 +90,6 @@ def test_capture_integrity_detects_post_run_mutation(example_root: Path, tmp_pat
     (output / "timeline.json").write_text("{}", encoding="utf-8")
     compiled = compile_task_file(example_root / "task.yaml", tmp_path / "compiled-again")
     verifier = payload_as(compiled.verifier_pack, VerifierPack, expected_kind="verifier_pack")
-    verification = verify_result(
-        verifier_pack=verifier, result=result, artifact_root=output
-    )
+    verification = verify_result(verifier_pack=verifier, result=result, artifact_root=output)
     assert verification.artifact_validity == ArtifactValidity.INVALID
     assert "capture_integrity_mismatch" in verification.reason_codes

@@ -1,0 +1,319 @@
+{
+  "$defs": {
+    "ChatMaxTokensField": {
+      "description": "Token-limit field used by a Chat Completions-compatible endpoint.",
+      "enum": [
+        "max_completion_tokens",
+        "max_tokens"
+      ],
+      "title": "ChatMaxTokensField",
+      "type": "string"
+    },
+    "CommandToolSpec": {
+      "additionalProperties": false,
+      "description": "A declared function tool backed by a local command.\n\nTool arguments are sent as one JSON object on stdin. The command executes without a\nshell and receives only a small baseline environment plus explicitly allowed names.",
+      "properties": {
+        "command": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Command",
+          "type": "array"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "parameters": {
+          "additionalProperties": true,
+          "title": "Parameters",
+          "type": "object"
+        },
+        "pass_environment": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Pass Environment",
+          "type": "array"
+        },
+        "timeout_seconds": {
+          "default": 60.0,
+          "exclusiveMinimum": 0.0,
+          "title": "Timeout Seconds",
+          "type": "number"
+        },
+        "working_directory": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Working Directory"
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "parameters",
+        "command"
+      ],
+      "title": "CommandToolSpec",
+      "type": "object"
+    },
+    "InlineImageSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "asset_id": {
+          "title": "Asset Id",
+          "type": "string"
+        },
+        "detail": {
+          "default": "auto",
+          "title": "Detail",
+          "type": "string"
+        },
+        "max_bytes": {
+          "default": 10000000,
+          "minimum": 1,
+          "title": "Max Bytes",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "asset_id"
+      ],
+      "title": "InlineImageSpec",
+      "type": "object"
+    },
+    "OpenAIAPIStyle": {
+      "enum": [
+        "responses",
+        "chat_completions"
+      ],
+      "title": "OpenAIAPIStyle",
+      "type": "string"
+    },
+    "RequestTraceMode": {
+      "description": "How provider request payloads are represented in the durable trace.",
+      "enum": [
+        "digest_only",
+        "redacted",
+        "full"
+      ],
+      "title": "RequestTraceMode",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "adapter_id": {
+      "title": "Adapter Id",
+      "type": "string"
+    },
+    "api_key_env": {
+      "default": "OPENAI_API_KEY",
+      "title": "Api Key Env",
+      "type": "string"
+    },
+    "api_style": {
+      "$ref": "#/$defs/OpenAIAPIStyle",
+      "default": "responses"
+    },
+    "chat_max_tokens_field": {
+      "$ref": "#/$defs/ChatMaxTokensField",
+      "default": "max_completion_tokens"
+    },
+    "command_tools": {
+      "items": {
+        "$ref": "#/$defs/CommandToolSpec"
+      },
+      "title": "Command Tools",
+      "type": "array"
+    },
+    "enable_artifact_tools": {
+      "default": true,
+      "title": "Enable Artifact Tools",
+      "type": "boolean"
+    },
+    "enable_asset_reader": {
+      "default": true,
+      "title": "Enable Asset Reader",
+      "type": "boolean"
+    },
+    "endpoint": {
+      "title": "Endpoint",
+      "type": "string"
+    },
+    "extra_headers": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Extra Headers",
+      "type": "object"
+    },
+    "final_text_path": {
+      "default": "provider/final.txt",
+      "title": "Final Text Path",
+      "type": "string"
+    },
+    "header_environment": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Header Environment",
+      "type": "object"
+    },
+    "inline_images": {
+      "items": {
+        "$ref": "#/$defs/InlineImageSpec"
+      },
+      "title": "Inline Images",
+      "type": "array"
+    },
+    "instructions": {
+      "default": "You are the candidate agent in a VideoBench run. Complete the declared editing work through the available tools. Durable deliverables must be written below the declared output root. Do not claim terminal success merely because a tool accepted a request.",
+      "title": "Instructions",
+      "type": "string"
+    },
+    "max_asset_text_chars": {
+      "default": 200000,
+      "minimum": 1,
+      "title": "Max Asset Text Chars",
+      "type": "integer"
+    },
+    "max_model_calls": {
+      "default": 8,
+      "minimum": 1,
+      "title": "Max Model Calls",
+      "type": "integer"
+    },
+    "max_output_tokens": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Max Output Tokens"
+    },
+    "max_tool_calls": {
+      "default": 64,
+      "minimum": 0,
+      "title": "Max Tool Calls",
+      "type": "integer"
+    },
+    "max_tool_result_chars": {
+      "default": 100000,
+      "minimum": 1,
+      "title": "Max Tool Result Chars",
+      "type": "integer"
+    },
+    "preserve_raw_responses": {
+      "default": true,
+      "title": "Preserve Raw Responses",
+      "type": "boolean"
+    },
+    "prompt_prefix": {
+      "default": "",
+      "title": "Prompt Prefix",
+      "type": "string"
+    },
+    "reasoning_effort": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Reasoning Effort"
+    },
+    "request_timeout_seconds": {
+      "default": 120.0,
+      "exclusiveMinimum": 0.0,
+      "title": "Request Timeout Seconds",
+      "type": "number"
+    },
+    "request_trace_mode": {
+      "$ref": "#/$defs/RequestTraceMode",
+      "default": "redacted"
+    },
+    "require_api_key": {
+      "default": true,
+      "title": "Require Api Key",
+      "type": "boolean"
+    },
+    "retry_http_statuses": {
+      "items": {
+        "type": "integer"
+      },
+      "title": "Retry Http Statuses",
+      "type": "array"
+    },
+    "store": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": false,
+      "title": "Store"
+    },
+    "temperature": {
+      "anyOf": [
+        {
+          "maximum": 2.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Temperature"
+    },
+    "trace_path": {
+      "default": "provider/trace.json",
+      "title": "Trace Path",
+      "type": "string"
+    },
+    "transport_backoff_seconds": {
+      "items": {
+        "type": "number"
+      },
+      "title": "Transport Backoff Seconds",
+      "type": "array"
+    },
+    "transport_max_attempts": {
+      "default": 3,
+      "minimum": 1,
+      "title": "Transport Max Attempts",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "adapter_id",
+    "endpoint"
+  ],
+  "title": "OpenAICompatibleConfig",
+  "type": "object"
+}

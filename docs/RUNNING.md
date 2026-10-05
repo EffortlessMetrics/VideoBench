@@ -134,6 +134,38 @@ workspace. The adapter writes the same `UsageRecord` shape shown in
 
 Infrastructure transport retries must be disclosed. Semantic retries and agent self-correction belong in the attempt's usage and event journal; they are never silently removed.
 
+## Candidate execution through a provider endpoint
+
+`run-openai-compatible` is the first first-party model/provider adapter. It supports
+Responses- and Chat Completions-compatible JSON over HTTP while preserving the generic
+VideoBench evidence contracts.
+
+```bash
+videobench run-openai-compatible \
+  --execution-pack .videobench/forms/form-id/execution-pack.json \
+  --run-stack path/to/run-stack.yaml \
+  --run-condition path/to/run-condition.yaml \
+  --adapter-config examples/provider-adapters/openai-responses.yaml \
+  --asset-root path/to/task-root \
+  --workspace .videobench/work/attempt-001 \
+  --artifact-root .videobench/work/attempt-001/output \
+  --out .videobench/runs/attempt-001.json
+```
+
+The model is declared in `RunStack`; the adapter file controls endpoint, authentication
+environment, wire style, retry policy, function tools, request evidence, and response
+retention. Built-in tools can read declared text assets and write or copy bounded
+artifacts. Additional command tools run without a shell and receive JSON on standard
+input.
+
+The adapter enforces model-call, tool-call, token, and wall-time limits where the evidence
+permits enforcement. Transport retries are explicit. Missing provider usage remains
+`null`, and list-equivalent pricing remains unknown when a nonzero-priced dimension is
+unavailable.
+
+See [Provider and agent-harness adapters](PROVIDER_ADAPTERS.md) for the complete contract,
+security boundary, examples, and claim limit.
+
 ## Manual product capture
 
 Use manual capture for managed products or expert-operated sessions that are not automated yet:

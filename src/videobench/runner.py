@@ -6,13 +6,15 @@ artifacts, and it does not decide whether the produced work is correct.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import shutil
 import subprocess
 import time
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from videobench.canonical import path_sha256, sha256_hex
 from videobench.contracts import (
@@ -28,6 +30,9 @@ from videobench.contracts import (
 )
 from videobench.io import load_envelope
 from videobench.types import OutcomeStatus
+
+if TYPE_CHECKING:
+    from videobench.adapters.openai_compatible import HTTPTransport, OpenAICompatibleConfig
 
 
 _MEDIA_BY_SUFFIX: dict[str, MediaType] = {
@@ -109,8 +114,10 @@ def capture_artifacts(root: Path, *, exclude: Iterable[str] = ()) -> list[Eviden
 
 
 def load_usage(path: Path | None) -> UsageRecord:
-    if path is None or not path.exists():
+    if path is None:
         return UsageRecord()
+    if not path.exists():
+        raise FileNotFoundError(f"Usage receipt was not produced: {path}")
     value = json.loads(path.read_text(encoding="utf-8"))
     return UsageRecord.model_validate(value)
 
@@ -118,19 +125,22 @@ def load_usage(path: Path | None) -> UsageRecord:
 def _budget_failures(
     envelope: ResourceEnvelope, usage: UsageRecord
 ) -> tuple[list[dict[str, float | int]], list[str]]:
-    comparisons: list[tuple[str, float | int | None, float | int]] = [
+    comparisons: list[tuple[str, float | int | None, float | int | None]] = [
         ("wall_seconds", envelope.max_wall_seconds, usage.wall_seconds),
         ("model_calls", envelope.max_model_calls, usage.model_calls),
         ("tool_calls", envelope.max_tool_calls, usage.tool_calls),
         ("input_tokens", envelope.max_input_tokens, usage.input_tokens),
         ("output_tokens", envelope.max_output_tokens, usage.output_tokens),
     ]
-    failures = [
-        {"resource": name, "limit": limit, "actual": actual}
-        for name, limit, actual in comparisons
-        if limit is not None and actual > limit
-    ]
+    failures: list[dict[str, float | int]] = []
     missing: list[str] = []
+    for name, limit, actual in comparisons:
+        if limit is None:
+            continue
+        if actual is None:
+            missing.append(f"{name}_not_reported")
+        elif actual > limit:
+            failures.append({"resource": name, "limit": limit, "actual": actual})
     if envelope.max_candidate_cost_usd is not None:
         if usage.actual_candidate_cost_usd is None:
             missing.append("candidate_cost_not_reported")
@@ -253,9 +263,7 @@ def _require_empty_output_dir(output_dir: Path) -> None:
         if output_dir.is_symlink() or not output_dir.is_dir():
             raise ValueError(f"Output path must be a real directory: {output_dir}")
         if any(output_dir.iterdir()):
-            raise ValueError(
-                f"Output directory must be empty before a command run: {output_dir}"
-            )
+            raise ValueError(f"Output directory must be empty before a command run: {output_dir}")
     else:
         output_dir.mkdir(parents=True)
 
@@ -313,8 +321,7 @@ def run_command(
     overridden = reserved_env.intersection(extra_env or {})
     if overridden:
         raise ValueError(
-            "extra_env may not override VideoBench protocol variables: "
-            f"{sorted(overridden)}"
+            f"extra_env may not override VideoBench protocol variables: {sorted(overridden)}"
         )
 
     env = os.environ.copy()
@@ -385,6 +392,15 @@ def run_command(
 
     elapsed = time.perf_counter() - start
     known_missing: list[str] = []
+    if usage_path is None:
+        known_missing.extend(
+            [
+                "input_tokens_not_reported",
+                "output_tokens_not_reported",
+                "reasoning_tokens_not_reported",
+                "candidate_cost_not_reported",
+            ]
+        )
     try:
         usage = load_usage(usage_path)
     except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as error:
@@ -403,10 +419,8 @@ def run_command(
 
     excluded: list[str] = []
     if usage_path is not None:
-        try:
+        with contextlib.suppress(ValueError):
             excluded.append(usage_path.resolve().relative_to(output_dir.resolve()).as_posix())
-        except ValueError:
-            pass
 
     return _build_result(
         execution_pack=execution_pack,
@@ -420,6 +434,63 @@ def run_command(
         stderr=stderr,
         known_missing_evidence=known_missing,
         exclude=excluded,
+    )
+
+
+def run_openai_compatible(
+    *,
+    execution_pack_path: Path,
+    execution_pack: ExecutionPack,
+    run_stack: RunStack,
+    run_condition: RunCondition,
+    config: OpenAICompatibleConfig,
+    asset_root: Path,
+    workspace: Path,
+    output_dir: Path,
+    transport: HTTPTransport | None = None,
+    sleep: Callable[[float], None] = time.sleep,
+    cancellation_check: Callable[[], bool] | None = None,
+) -> WorkResultBundle:
+    """Run the first-party OpenAI-compatible provider/harness adapter."""
+
+    from videobench.adapters.openai_compatible import execute_openai_compatible
+
+    if not execution_pack_path.is_file():
+        raise ValueError(f"ExecutionPack path does not exist: {execution_pack_path}")
+    execution_envelope = load_envelope(
+        execution_pack_path,
+        expected_kind="execution_pack",
+    )
+    if execution_envelope.payload_sha256 != sha256_hex(execution_pack):
+        raise ValueError("ExecutionPack path and in-memory ExecutionPack do not match")
+    if asset_root.is_symlink() or not asset_root.is_dir():
+        raise ValueError(f"Asset root must be a real directory: {asset_root}")
+    workspace.mkdir(parents=True, exist_ok=True)
+    _require_empty_output_dir(output_dir)
+    adapter_result = execute_openai_compatible(
+        execution_pack=execution_pack,
+        run_stack=run_stack,
+        run_condition=run_condition,
+        config=config,
+        asset_root=asset_root,
+        workspace=workspace,
+        output_dir=output_dir,
+        transport=transport,
+        sleep=sleep,
+        cancellation_check=cancellation_check,
+    )
+    return _build_result(
+        execution_pack=execution_pack,
+        run_stack=run_stack,
+        run_condition=run_condition,
+        output_dir=output_dir,
+        usage=adapter_result.usage,
+        outcome=adapter_result.outcome,
+        events=adapter_result.events,
+        stdout=adapter_result.stdout,
+        stderr=adapter_result.stderr,
+        known_missing_evidence=adapter_result.known_missing_evidence,
+        notes=adapter_result.notes,
     )
 
 

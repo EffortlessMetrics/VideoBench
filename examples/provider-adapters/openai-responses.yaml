@@ -1,0 +1,14 @@
+adapter_id: openai-responses-v1
+endpoint: https://api.openai.com/v1/responses
+api_style: responses
+api_key_env: OPENAI_API_KEY
+require_api_key: true
+store: false
+request_trace_mode: redacted
+max_model_calls: 8
+max_tool_calls: 64
+request_timeout_seconds: 120
+transport_max_attempts: 3
+transport_backoff_seconds: [0.5, 1.0]
+retry_http_statuses: [408, 409, 429, 500, 502, 503, 504]
+preserve_raw_responses: true

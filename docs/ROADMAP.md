@@ -11,6 +11,9 @@ Complete:
 - TaskSource compiler;
 - ExecutionPack / VerifierPack / JudgePack information boundary;
 - generic command runner;
+- first-party OpenAI-compatible Responses/Chat Completions adapter;
+- receipted function-tool loop with bounded built-in and command tools;
+- explicit provider transport retries, request-trace modes, and missing-usage semantics;
 - manual product capture;
 - immutable work-result receipts bound to exact ExecutionPack digests and instruments;
 - declarative independent verifier;
@@ -25,6 +28,15 @@ Complete:
 - synthetic known-good / known-bad vertical demo;
 - path, symlink, stale-output, budget, and protocol-variable hardening;
 - CI, typing, linting, and coverage configuration.
+
+## Next: provider live qualification
+
+- Run the adapter against one declared provider/model snapshot.
+- Preserve credential-safe raw request, response, usage, retry, and pricing receipts.
+- Exercise tool use, timeout, rate limit, malformed response, cancellation, and budget
+  cases against the live surface where safe.
+- Publish one public-development-form result without representing it as Resolve or
+  editorial evidence.
 
 ## Next: real Resolve conformance slice
 
@@ -70,7 +82,7 @@ Repeat clean attempts, preserve all evidence, and report stack deltas without ov
 
 ## Later
 
-- provider-specific model and VLM judge adapters;
+- additional provider/product and VLM judge adapters;
 - GUI observation/action adapters;
 - richer Resolve project canonicalization;
 - family-clustered bootstrap and hierarchical analysis;

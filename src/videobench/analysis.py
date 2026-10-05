@@ -28,30 +28,41 @@ from videobench.types import (
 )
 
 
-def calculate_list_equivalent_cost(result: WorkResultBundle, policy: PricingPolicy) -> float:
-    """Reprice raw usage under a frozen list-price policy."""
+def calculate_list_equivalent_cost(result: WorkResultBundle, policy: PricingPolicy) -> float | None:
+    """Reprice raw usage under a frozen list-price policy.
+
+    A priced dimension whose usage is unknown makes the total unknown. Unpriced
+    dimensions may remain unavailable without blocking a total because they contribute
+    exactly zero under the frozen policy.
+    """
 
     usage = result.usage
     pricing = policy.pricing
     million = 1_000_000
-    return (
-        usage.input_tokens / million * pricing.input_per_million_usd
-        + usage.cached_input_tokens / million * pricing.cached_input_per_million_usd
-        + usage.cache_write_tokens / million * pricing.cache_write_per_million_usd
-        + usage.reasoning_tokens / million * pricing.reasoning_per_million_usd
-        + usage.output_tokens / million * pricing.output_per_million_usd
-        + usage.image_units * pricing.image_unit_usd
-        + usage.video_units * pricing.video_unit_usd
-        + usage.model_calls * pricing.per_call_usd
-    )
+    dimensions: list[tuple[float | int | None, float, float]] = [
+        (usage.input_tokens, pricing.input_per_million_usd, million),
+        (usage.cached_input_tokens, pricing.cached_input_per_million_usd, million),
+        (usage.cache_write_tokens, pricing.cache_write_per_million_usd, million),
+        (usage.reasoning_tokens, pricing.reasoning_per_million_usd, million),
+        (usage.output_tokens, pricing.output_per_million_usd, million),
+        (usage.image_units, pricing.image_unit_usd, 1.0),
+        (usage.video_units, pricing.video_unit_usd, 1.0),
+    ]
+    total = usage.model_calls * pricing.per_call_usd
+    for value, rate, divisor in dimensions:
+        if rate == 0:
+            continue
+        if value is None:
+            return None
+        total += value / divisor * rate
+    return total
 
 
 def _semantic_acceptance(judgment: JudgmentBundle, scoring: ScoringPolicy) -> bool:
     if judgment.fatal_semantic_failure:
         return False
     if any(
-        item.verdict
-        in {JudgmentVerdict.INDETERMINATE, JudgmentVerdict.INSUFFICIENT_BASIS}
+        item.verdict in {JudgmentVerdict.INDETERMINATE, JudgmentVerdict.INSUFFICIENT_BASIS}
         for item in judgment.criteria
     ):
         return False
@@ -200,6 +211,10 @@ def score_result(
     ):
         raise ValueError("Qualified-panel status requires qualification receipts")
 
+    list_equivalent_cost = calculate_list_equivalent_cost(result, pricing_policy)
+    if list_equivalent_cost is None:
+        reason_codes.add("usage_evidence_incomplete")
+
     criteria = judgment.criteria if judgment is not None else []
     return ScoreView(
         task_id=result.task_id,
@@ -222,9 +237,7 @@ def score_result(
         criterion_verdicts={item.criterion_id: item.verdict for item in criteria},
         reason_codes=sorted(reason_codes),
         candidate_metered_cost_usd=result.usage.actual_candidate_cost_usd,
-        candidate_list_equivalent_cost_usd=calculate_list_equivalent_cost(
-            result, pricing_policy
-        ),
+        candidate_list_equivalent_cost_usd=list_equivalent_cost,
         judge_cost_usd=judge_cost_usd,
         input_tokens=result.usage.input_tokens,
         output_tokens=result.usage.output_tokens,
@@ -316,6 +329,16 @@ def summarize_study(study: StudySpec, scores: list[ScoreView]) -> StudySummary:
                 for verdict in item.criterion_verdicts.values()
             )
         )
+        priced_costs = [
+            item.candidate_list_equivalent_cost_usd
+            for item in stack_scores
+            if item.candidate_list_equivalent_cost_usd is not None
+        ]
+        if stack_scores and len(priced_costs) != len(stack_scores):
+            notes.append(
+                f"Incomplete economics: {stack_id} has list-equivalent cost for "
+                f"{len(priced_costs)} of {len(stack_scores)} eligible attempts."
+            )
         summaries.append(
             StackSummary(
                 stack_id=stack_id,
@@ -327,11 +350,8 @@ def summarize_study(study: StudySpec, scores: list[ScoreView]) -> StudySummary:
                     else 0.0
                 ),
                 family_macro_acceptance=fmean(family_rates) if family_rates else 0.0,
-                mean_list_equivalent_cost_usd=(
-                    fmean(item.candidate_list_equivalent_cost_usd for item in stack_scores)
-                    if stack_scores
-                    else 0.0
-                ),
+                priced_attempts=len(priced_costs),
+                mean_list_equivalent_cost_usd=(fmean(priced_costs) if priced_costs else None),
                 mean_wall_seconds=(
                     fmean(item.wall_seconds for item in stack_scores) if stack_scores else 0.0
                 ),
@@ -380,7 +400,12 @@ def render_score_markdown(score: ScoreView) -> str:
             "## Economics",
             "",
             f"- Metered candidate cost: {score.candidate_metered_cost_usd}",
-            f"- List-equivalent candidate cost: ${score.candidate_list_equivalent_cost_usd:.6f}",
+            "- List-equivalent candidate cost: "
+            + (
+                f"${score.candidate_list_equivalent_cost_usd:.6f}"
+                if score.candidate_list_equivalent_cost_usd is not None
+                else "unknown"
+            ),
             f"- Judge cost: {score.judge_cost_usd}",
             f"- Wall time: {score.wall_seconds:.3f}s",
             f"- Human time: {score.human_seconds:.3f}s",
