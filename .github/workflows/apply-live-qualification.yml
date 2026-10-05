@@ -7,10 +7,17 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: live-qualification-bootstrap
+  cancel-in-progress: true
+
 jobs:
   apply:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     timeout-minutes: 10
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v7
         with:
@@ -19,6 +26,7 @@ jobs:
       - name: Reconstruct preserved patch
         run: |
           set -euo pipefail
+          mkdir -p /tmp
           cat bootstrap/live-qualification.part-* > /tmp/live-qualification.patch.b64
           wc -c /tmp/live-qualification.patch.b64 | tee /tmp/bootstrap-diagnostic.txt
           test "$(wc -c < /tmp/live-qualification.patch.b64)" = "46020"
@@ -50,7 +58,7 @@ jobs:
         with:
           name: live-qualification-bootstrap-diagnostics
           path: |
-            /tmp/bootstrap-diagnostic.txt
-            /tmp/live-qualification.patch.b64
-            /tmp/live-qualification.patch
+            D:/a/_temp/bootstrap-diagnostic.txt
+            D:/a/_temp/live-qualification.patch.b64
+            D:/a/_temp/live-qualification.patch
           retention-days: 1
