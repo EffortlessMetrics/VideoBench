@@ -128,6 +128,8 @@ Command tools:
 
 Tool names and parameter schemas are validated before the run. Command tools default to `strict: true`. Every object in a strict schema must set `additionalProperties: false`, and every declared property must appear in `required`; a logically optional value is represented as a required nullable field. Set `strict: false` only when a compatible endpoint or a deliberately open value shape cannot satisfy that subset. The built-in arbitrary-JSON artifact writer is intentionally non-strict; the other built-ins use strict-compatible schemas.
 
+A non-strict command wrapper remains responsible for validating the arguments it accepts. `strict: false` changes provider-side schema enforcement; it does not weaken VideoBench's independent terminal-state verification.
+
 ## Retry and budget semantics
 
 Transport retries are explicit events and usage facts. They are separate from model retries, re-prompts, tool loops, and agent self-correction.
