@@ -16,14 +16,26 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Verify and apply preserved patch
+      - name: Reconstruct preserved patch
         run: |
           set -euo pipefail
           cat bootstrap/live-qualification.part-* > /tmp/live-qualification.patch.b64
+          wc -c /tmp/live-qualification.patch.b64 | tee /tmp/bootstrap-diagnostic.txt
           test "$(wc -c < /tmp/live-qualification.patch.b64)" = "46020"
-          echo "9b806df951bf98b72f8ea2827691afcdb6534ce9b144fd3830d32ea72d9aaab1  /tmp/live-qualification.patch.b64" | sha256sum -c -
+          echo "9b806df951bf98b72f8ea2827691afcdb6534ce9b144fd3830d32ea72d9aaab1  /tmp/live-qualification.patch.b64" | sha256sum -c - | tee -a /tmp/bootstrap-diagnostic.txt
           base64 --decode /tmp/live-qualification.patch.b64 | gzip --decompress > /tmp/live-qualification.patch
-          echo "03110780b7fd65f9fe7618c09cf4aa1957f68ecf3c1e8e87732c6ddb6257daaf  /tmp/live-qualification.patch" | sha256sum -c -
+          wc -c /tmp/live-qualification.patch | tee -a /tmp/bootstrap-diagnostic.txt
+          echo "03110780b7fd65f9fe7618c09cf4aa1957f68ecf3c1e8e87732c6ddb6257daaf  /tmp/live-qualification.patch" | sha256sum -c - | tee -a /tmp/bootstrap-diagnostic.txt
+
+      - name: Check patch against baseline
+        run: |
+          set -euo pipefail
+          git status --short | tee -a /tmp/bootstrap-diagnostic.txt
+          git apply --check --binary --whitespace=error-all /tmp/live-qualification.patch 2>&1 | tee -a /tmp/bootstrap-diagnostic.txt
+
+      - name: Apply and publish feature commit
+        run: |
+          set -euo pipefail
           git apply --index --binary --whitespace=error-all /tmp/live-qualification.patch
           git rm .github/workflows/apply-live-qualification.yml
           git rm -r bootstrap
@@ -31,3 +43,14 @@ jobs:
           git config user.email "15812269+EffortlessSteven@users.noreply.github.com"
           git commit -m "feat: add live MCP qualification foundation"
           git push origin HEAD:${GITHUB_REF_NAME}
+
+      - name: Upload bootstrap diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: live-qualification-bootstrap-diagnostics
+          path: |
+            /tmp/bootstrap-diagnostic.txt
+            /tmp/live-qualification.patch.b64
+            /tmp/live-qualification.patch
+          retention-days: 1
