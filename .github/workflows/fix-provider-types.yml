@@ -1,0 +1,117 @@
+name: Fix and verify provider adapter typing
+
+on:
+  push:
+    branches: [work/provider-adapter]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: "${{ github.event.head_commit.message == 'chore: fix provider adapter typing' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: work/provider-adapter
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+          cache: pip
+
+      - name: Apply explicit type corrections
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace(path: str, old: str, new: str) -> None:
+              target = Path(path)
+              text = target.read_text(encoding="utf-8")
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected one replacement target, found {count}")
+              target.write_text(text.replace(old, new), encoding="utf-8")
+
+          replace(
+              "src/videobench/verifier.py",
+              "from videobench.contracts import (\n    CheckResult,\n    ObjectiveCheckSpec,",
+              "from videobench.contracts import (\n    CheckResult,\n    CheckType,\n    ObjectiveCheckSpec,",
+          )
+          replace(
+              "src/videobench/verifier.py",
+              "            expected = int(check.expected)\n            return _result(\n                check,\n                CheckStatus.PASS if count >= expected else CheckStatus.FAIL,\n                actual=count,\n                expected=expected,",
+              "            minimum_count = int(check.expected)\n            return _result(\n                check,\n                CheckStatus.PASS if count >= minimum_count else CheckStatus.FAIL,\n                actual=count,\n                expected=minimum_count,",
+          )
+          replace(
+              "src/videobench/verifier.py",
+              "            expected = str(check.expected)\n            return _result(\n                check,\n                CheckStatus.PASS if expected in text else CheckStatus.FAIL,\n                actual=expected in text,",
+              "            needle = str(check.expected)\n            return _result(\n                check,\n                CheckStatus.PASS if needle in text else CheckStatus.FAIL,\n                actual=needle in text,",
+          )
+          replace(
+              "src/videobench/verifier.py",
+              '            check_type="file_sha256_equals",',
+              "            check_type=CheckType.FILE_SHA256_EQUALS,",
+          )
+          replace(
+              "src/videobench/adapters/openai_compatible.py",
+              "            if not all(isinstance(value, str) for value in (name, arguments, call_id)):\n                raise ProviderProtocolError(\"Malformed Responses function call\")\n            calls.append({\"name\": name, \"arguments\": arguments, \"call_id\": call_id})",
+              "            if (\n                not isinstance(name, str)\n                or not isinstance(arguments, str)\n                or not isinstance(call_id, str)\n            ):\n                raise ProviderProtocolError(\"Malformed Responses function call\")\n            calls.append({\"name\": name, \"arguments\": arguments, \"call_id\": call_id})",
+          )
+          replace(
+              "src/videobench/adapters/openai_compatible.py",
+              ") -> list[dict[str, int]]:\n    failures: list[dict[str, int]] = []",
+              ") -> list[dict[str, str | int]]:\n    failures: list[dict[str, str | int]] = []",
+          )
+          replace(
+              "src/videobench/adapters/openai_compatible.py",
+              "    usage = UsageRecord(\n        **usage_values,",
+              "    usage = UsageRecord(\n        input_tokens=usage_values[\"input_tokens\"],\n        cached_input_tokens=usage_values[\"cached_input_tokens\"],\n        cache_write_tokens=usage_values[\"cache_write_tokens\"],\n        reasoning_tokens=usage_values[\"reasoning_tokens\"],\n        output_tokens=usage_values[\"output_tokens\"],",
+          )
+          replace(
+              "src/videobench/runner.py",
+              ") -> tuple[list[dict[str, float | int]], list[str]]:",
+              ") -> tuple[list[dict[str, str | float | int]], list[str]]:",
+          )
+          replace(
+              "src/videobench/runner.py",
+              "    failures: list[dict[str, float | int]] = []",
+              "    failures: list[dict[str, str | float | int]] = []",
+          )
+
+          Path("VERIFICATION_FAILURE.txt").unlink(missing_ok=True)
+          Path(".github/workflows/fix-provider-types.yml").unlink()
+          PY
+
+      - name: Install development toolchain
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Normalize source
+        run: |
+          set -euo pipefail
+          python -m ruff check --fix --unsafe-fixes . || true
+          python -m ruff format .
+          python -m ruff check .
+          git config user.name 'EffortlessSteven'
+          git config user.email '15812269+EffortlessSteven@users.noreply.github.com'
+          git add -A
+          git commit -m 'fix: preserve provider evidence types through verification'
+
+      - name: Verify complete repository gate
+        run: |
+          set -o pipefail
+          if ! python scripts/check.py 2>&1 | tee /tmp/check.log; then
+            cp /tmp/check.log VERIFICATION_FAILURE.txt
+            git add -A
+            git commit -m 'chore: capture provider adapter verification failure'
+            git push origin HEAD:work/provider-adapter
+            exit 1
+          fi
+
+      - name: Publish verified branch
+        run: git push origin HEAD:work/provider-adapter
