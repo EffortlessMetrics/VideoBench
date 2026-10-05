@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   format:
-    if: github.event.head_commit.message != 'style: apply Ruff format'
+    if: "${{ github.event.head_commit.message != 'style: apply Ruff format' }}"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
