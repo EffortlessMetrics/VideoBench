@@ -290,7 +290,11 @@ def qualify_judge(
         relation_a, score_a = pair[0]
         relation_b, score_b = pair[1]
         assert score_a is not None and score_b is not None
-        if (relation_a == "higher" and relation_b == "lower" and score_a > score_b) or (relation_b == "higher" and relation_a == "lower" and score_b > score_a) or (relation_a == relation_b == "equal" and score_a == score_b):
+        if (
+            (relation_a == "higher" and relation_b == "lower" and score_a > score_b)
+            or (relation_b == "higher" and relation_a == "lower" and score_b > score_a)
+            or (relation_a == relation_b == "equal" and score_a == score_b)
+        ):
             discriminated += 1
     mutant_discrimination = discriminated / pair_count if pair_count else 0.0
 
