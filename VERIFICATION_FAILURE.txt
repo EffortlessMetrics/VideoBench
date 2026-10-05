@@ -1,0 +1,30 @@
++ check JSON Schema drift
++ /opt/hostedtoolcache/Python/3.13.15/x64/bin/python -m ruff format --check .
+unformatted: File would be reformatted
+   --> src/videobench/judge.py:293:13
+    |
+292 |         assert score_a is not None and score_b is not None
+    -         if (relation_a == "higher" and relation_b == "lower" and score_a > score_b) or (relation_b == "higher" and relation_a == "lower" and score_b > score_a) or (relation_a == relation_b == "equal" and score_a == score_b):
+293 +         if (
+294 +             (relation_a == "higher" and relation_b == "lower" and score_a > score_b)
+295 +             or (relation_b == "higher" and relation_a == "lower" and score_b > score_a)
+296 +             or (relation_a == relation_b == "equal" and score_a == score_b)
+297 +         ):
+298 |             discriminated += 1
+    |
+
+1 file would be reformatted, 61 files already formatted
+Traceback (most recent call last):
+  File "/home/runner/work/VideoBench/VideoBench/scripts/check.py", line 80, in <module>
+    main()
+    ~~~~^^
+  File "/home/runner/work/VideoBench/VideoBench/scripts/check.py", line 53, in main
+    run(sys.executable, "-m", "ruff", "format", "--check", ".")
+    ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/VideoBench/VideoBench/scripts/check.py", line 23, in run
+    subprocess.run(command, cwd=ROOT, env=environment, check=True)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.13.15/x64/lib/python3.13/subprocess.py", line 577, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '('/opt/hostedtoolcache/Python/3.13.15/x64/bin/python', '-m', 'ruff', 'format', '--check', '.')' returned non-zero exit status 1.
