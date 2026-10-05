@@ -41,6 +41,11 @@
           "title": "Pass Environment",
           "type": "array"
         },
+        "strict": {
+          "default": true,
+          "title": "Strict",
+          "type": "boolean"
+        },
         "timeout_seconds": {
           "default": 60.0,
           "exclusiveMinimum": 0.0,
@@ -118,6 +123,11 @@
     "adapter_id": {
       "title": "Adapter Id",
       "type": "string"
+    },
+    "allow_insecure_http": {
+      "default": false,
+      "title": "Allow Insecure Http",
+      "type": "boolean"
     },
     "api_key_env": {
       "default": "OPENAI_API_KEY",

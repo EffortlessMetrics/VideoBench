@@ -1001,3 +1001,126 @@ def test_checked_in_provider_configs_validate(repo_root: Path) -> None:
     assert configs[0].require_api_key is True
     assert configs[1].api_style == OpenAIAPIStyle.CHAT_COMPLETIONS
     assert configs[1].require_api_key is False
+
+
+def test_provider_tool_strict_flags_are_schema_compatible(
+    example_root: Path, tmp_path: Path
+) -> None:
+    pack_path, execution, stack, condition = _compiled(example_root, tmp_path)
+    command_tool = CommandToolSpec(
+        name="optional_command",
+        description="A non-strict compatibility tool.",
+        strict=False,
+        parameters={
+            "type": "object",
+            "properties": {
+                "required_value": {"type": "string"},
+                "optional_value": {"type": "string"},
+            },
+            "required": ["required_value"],
+            "additionalProperties": False,
+        },
+        command=[sys.executable],
+    )
+    transport = FakeTransport([_final_response()])
+    result = run_openai_compatible(
+        execution_pack_path=pack_path,
+        execution_pack=execution,
+        run_stack=stack,
+        run_condition=condition,
+        config=_config(command_tools=[command_tool]),
+        asset_root=example_root,
+        workspace=tmp_path / "workspace",
+        output_dir=tmp_path / "output",
+        transport=transport,
+    )
+    assert result.outcome == OutcomeStatus.PASS
+    tools = {item["name"]: item for item in transport.requests[0]["body"]["tools"]}
+    assert tools["videobench_write_text_artifact"]["strict"] is True
+    assert tools["videobench_write_json_artifact"]["strict"] is False
+    assert tools["optional_command"]["strict"] is False
+    reader = tools["videobench_read_asset_text"]
+    assert reader["strict"] is True
+    assert set(reader["parameters"]["required"]) == {"asset_id", "max_chars"}
+    assert reader["parameters"]["properties"]["max_chars"]["type"] == [
+        "integer",
+        "null",
+    ]
+
+
+def test_strict_command_tool_requires_every_property_and_nested_object() -> None:
+    with pytest.raises(ValidationError, match="require every property"):
+        CommandToolSpec(
+            name="optional_property",
+            description="bad strict schema",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "required_value": {"type": "string"},
+                    "optional_value": {"type": ["string", "null"]},
+                },
+                "required": ["required_value"],
+                "additionalProperties": False,
+            },
+            command=[sys.executable],
+        )
+    with pytest.raises(ValidationError, match="require every property"):
+        CommandToolSpec(
+            name="nested_optional_property",
+            description="bad nested strict schema",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "value": {
+                        "type": "object",
+                        "properties": {"nested": {"type": "string"}},
+                        "required": [],
+                        "additionalProperties": False,
+                    }
+                },
+                "required": ["value"],
+                "additionalProperties": False,
+            },
+            command=[sys.executable],
+        )
+
+
+def test_plain_http_requires_loopback_or_explicit_opt_in() -> None:
+    with pytest.raises(ValidationError, match="limited to loopback"):
+        _config(endpoint="http://provider.example/v1/responses")
+    assert _config(endpoint="http://127.0.0.1:8000/v1/responses").allow_insecure_http is False
+    assert (
+        _config(
+            endpoint="http://provider.example/v1/responses",
+            allow_insecure_http=True,
+        ).allow_insecure_http
+        is True
+    )
+    with pytest.raises(ValidationError, match="URL fragment"):
+        _config(endpoint="https://provider.example/v1/responses#secret")
+
+
+def test_raw_response_opt_out_preserves_digest_not_error_body(
+    example_root: Path, tmp_path: Path
+) -> None:
+    pack_path, execution, stack, condition = _compiled(example_root, tmp_path)
+    secret_body = b'{"error":"private-provider-detail"}'
+    result = run_openai_compatible(
+        execution_pack_path=pack_path,
+        execution_pack=execution,
+        run_stack=stack,
+        run_condition=condition,
+        config=_config(preserve_raw_responses=False),
+        asset_root=example_root,
+        workspace=tmp_path / "workspace",
+        output_dir=tmp_path / "output",
+        transport=FakeTransport([TransportResponse(status=400, headers={}, body=secret_body)]),
+    )
+    assert result.outcome == OutcomeStatus.TOOL_FAILURE
+    assert "private-provider-detail" not in result.stderr
+    trace = json.loads((tmp_path / "output/provider/trace.json").read_text())
+    request = trace["requests"][0]
+    assert "response_text" not in request
+    assert request["response_bytes"] == len(secret_body)
+    assert request["response_sha256"]
+    assert "private-provider-detail" not in json.dumps(trace)

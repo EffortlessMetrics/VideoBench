@@ -11,6 +11,7 @@ from __future__ import annotations
 import base64
 import binascii
 import hashlib
+import ipaddress
 import json
 import mimetypes
 import os
@@ -66,6 +67,54 @@ class ChatMaxTokensField(StrEnum):
     MAX_TOKENS = "max_tokens"
 
 
+def _validate_strict_function_schema(schema: Mapping[str, Any], *, path: str = "$") -> None:
+    """Validate the JSON Schema subset required by strict function tools."""
+
+    schema_type = schema.get("type")
+    is_object = schema_type == "object" or (
+        isinstance(schema_type, list) and "object" in schema_type
+    )
+    if is_object:
+        properties = schema.get("properties")
+        if not isinstance(properties, Mapping):
+            raise ValueError(f"strict tool schema object at {path} must declare properties")
+        if schema.get("additionalProperties") is not False:
+            raise ValueError(
+                f"strict tool schema object at {path} must set additionalProperties to false"
+            )
+        required = schema.get("required", [])
+        if not isinstance(required, list) or set(required) != set(properties):
+            raise ValueError(f"strict tool schema object at {path} must require every property")
+        for name, child in properties.items():
+            if isinstance(child, Mapping):
+                _validate_strict_function_schema(child, path=f"{path}.properties.{name}")
+
+    items = schema.get("items")
+    if isinstance(items, Mapping):
+        _validate_strict_function_schema(items, path=f"{path}.items")
+    for keyword in ("allOf", "anyOf", "oneOf"):
+        variants = schema.get(keyword)
+        if isinstance(variants, list):
+            for index, child in enumerate(variants):
+                if isinstance(child, Mapping):
+                    _validate_strict_function_schema(child, path=f"{path}.{keyword}[{index}]")
+    definitions = schema.get("$defs")
+    if isinstance(definitions, Mapping):
+        for name, child in definitions.items():
+            if isinstance(child, Mapping):
+                _validate_strict_function_schema(child, path=f"{path}.$defs.{name}")
+
+
+def _is_loopback_hostname(hostname: str) -> bool:
+    normalized = hostname.rstrip(".").lower()
+    if normalized == "localhost" or normalized.endswith(".localhost"):
+        return True
+    try:
+        return ipaddress.ip_address(normalized).is_loopback
+    except ValueError:
+        return False
+
+
 class InlineImageSpec(StrictModel):
     asset_id: str
     detail: str = "auto"
@@ -82,6 +131,7 @@ class CommandToolSpec(StrictModel):
     name: str
     description: str
     parameters: dict[str, Any]
+    strict: bool = True
     command: list[str] = Field(min_length=1)
     timeout_seconds: float = Field(default=60.0, gt=0.0)
     pass_environment: list[str] = Field(default_factory=list)
@@ -103,7 +153,9 @@ class CommandToolSpec(StrictModel):
         if not isinstance(self.parameters.get("properties", {}), dict):
             raise ValueError("command tool parameters.properties must be an object")
         if self.parameters.get("additionalProperties") is not False:
-            raise ValueError("strict command tool schemas must set additionalProperties to false")
+            raise ValueError("command tool schemas must set additionalProperties to false")
+        if self.strict:
+            _validate_strict_function_schema(self.parameters)
         return self
 
 
@@ -113,6 +165,7 @@ class OpenAICompatibleConfig(StrictModel):
     api_style: OpenAIAPIStyle = OpenAIAPIStyle.RESPONSES
     api_key_env: str = "OPENAI_API_KEY"
     require_api_key: bool = True
+    allow_insecure_http: bool = False
     header_environment: dict[str, str] = Field(default_factory=dict)
     extra_headers: dict[str, str] = Field(default_factory=dict)
     instructions: str = (
@@ -153,6 +206,17 @@ class OpenAICompatibleConfig(StrictModel):
             raise ValueError("endpoint must be an HTTP or HTTPS URL")
         if parsed.username is not None or parsed.password is not None:
             raise ValueError("endpoint must not contain credentials")
+        if parsed.fragment:
+            raise ValueError("endpoint must not contain a URL fragment")
+        if (
+            parsed.scheme == "http"
+            and not self.allow_insecure_http
+            and not _is_loopback_hostname(parsed.hostname)
+        ):
+            raise ValueError(
+                "plain HTTP endpoints are limited to loopback unless "
+                "allow_insecure_http is explicitly enabled"
+            )
         if not self.api_key_env:
             raise ValueError("api_key_env must not be empty")
         validate_relative_evidence_path(self.final_text_path)
@@ -417,6 +481,7 @@ def _builtin_tool_definitions(config: OpenAICompatibleConfig) -> list[dict[str, 
                         "required": ["path", "content"],
                         "additionalProperties": False,
                     },
+                    "strict": True,
                 },
                 {
                     "name": "videobench_write_json_artifact",
@@ -430,6 +495,7 @@ def _builtin_tool_definitions(config: OpenAICompatibleConfig) -> list[dict[str, 
                         "required": ["path", "value"],
                         "additionalProperties": False,
                     },
+                    "strict": False,
                 },
                 {
                     "name": "videobench_copy_asset",
@@ -443,6 +509,7 @@ def _builtin_tool_definitions(config: OpenAICompatibleConfig) -> list[dict[str, 
                         "required": ["asset_id", "path"],
                         "additionalProperties": False,
                     },
+                    "strict": True,
                 },
             ]
         )
@@ -455,11 +522,12 @@ def _builtin_tool_definitions(config: OpenAICompatibleConfig) -> list[dict[str, 
                     "type": "object",
                     "properties": {
                         "asset_id": {"type": "string"},
-                        "max_chars": {"type": "integer", "minimum": 1},
+                        "max_chars": {"type": ["integer", "null"], "minimum": 1},
                     },
-                    "required": ["asset_id"],
+                    "required": ["asset_id", "max_chars"],
                     "additionalProperties": False,
                 },
+                "strict": True,
             }
         )
     return definitions
@@ -472,6 +540,7 @@ def _all_tool_definitions(config: OpenAICompatibleConfig) -> list[dict[str, Any]
             "name": tool.name,
             "description": tool.description,
             "parameters": tool.parameters,
+            "strict": tool.strict,
         }
         for tool in config.command_tools
     )
@@ -487,7 +556,7 @@ def _provider_tools(config: OpenAICompatibleConfig) -> list[dict[str, Any]]:
                 "name": item["name"],
                 "description": item["description"],
                 "parameters": item["parameters"],
-                "strict": True,
+                "strict": item["strict"],
             }
             for item in definitions
         ]
@@ -498,7 +567,7 @@ def _provider_tools(config: OpenAICompatibleConfig) -> list[dict[str, Any]]:
                 "name": item["name"],
                 "description": item["description"],
                 "parameters": item["parameters"],
-                "strict": True,
+                "strict": item["strict"],
             },
         }
         for item in definitions
@@ -644,6 +713,21 @@ def _decode_json(response: TransportResponse) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ProviderProtocolError("Provider response must be a JSON object")
     return value
+
+
+def _attach_response_body_evidence(
+    record: dict[str, Any],
+    response: TransportResponse,
+    *,
+    preserve_raw: bool,
+) -> str:
+    decoded = response.body.decode("utf-8", errors="replace")
+    if preserve_raw:
+        record["response_text"] = decoded
+    else:
+        record["response_sha256"] = hashlib.sha256(response.body).hexdigest()
+        record["response_bytes"] = len(response.body)
+    return decoded
 
 
 def _usage_values(payload: Mapping[str, Any], style: OpenAIAPIStyle) -> dict[str, int | None]:
@@ -814,7 +898,12 @@ def _execute_tool(
             return {"ok": True, "path": path.relative_to(output_dir).as_posix()}
         if name == "videobench_read_asset_text":
             path = _asset_path(execution_pack, asset_root, str(arguments["asset_id"]))
-            max_chars = int(arguments.get("max_chars", config.max_asset_text_chars))
+            requested_max_chars = arguments.get("max_chars")
+            max_chars = (
+                config.max_asset_text_chars
+                if requested_max_chars is None
+                else int(requested_max_chars)
+            )
             max_chars = min(max_chars, config.max_asset_text_chars)
             text = path.read_text(encoding="utf-8")
             return {
@@ -1177,9 +1266,10 @@ def execute_openai_compatible(
                 **_request_trace(body, config.request_trace_mode),
             }
             if response.status < 200 or response.status >= 300:
-                response_record["response_text"] = response.body.decode(
-                    "utf-8",
-                    errors="replace",
+                decoded_error = _attach_response_body_evidence(
+                    response_record,
+                    response,
+                    preserve_raw=config.preserve_raw_responses,
                 )
                 trace["requests"].append(response_record)
                 event_type = (
@@ -1194,7 +1284,11 @@ def execute_openai_compatible(
                     request_id=request_id,
                 )
                 outcome = OutcomeStatus.TOOL_FAILURE
-                stderr = response_record["response_text"]
+                stderr = (
+                    decoded_error
+                    if config.preserve_raw_responses
+                    else f"Provider returned HTTP {response.status}; response body withheld."
+                )
                 break
 
             try:
@@ -1225,9 +1319,10 @@ def execute_openai_compatible(
                     response_record["output_text"] = parsed_text
                 trace["requests"].append(response_record)
             except ProviderProtocolError as error:
-                response_record["response_text"] = response.body.decode(
-                    "utf-8",
-                    errors="replace",
+                _attach_response_body_evidence(
+                    response_record,
+                    response,
+                    preserve_raw=config.preserve_raw_responses,
                 )
                 trace["requests"].append(response_record)
                 outcome = OutcomeStatus.PROTOCOL_INVALID

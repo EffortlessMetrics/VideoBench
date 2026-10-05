@@ -64,10 +64,11 @@ Secrets come from environment variables.
 - `api_key_env` supplies the bearer token.
 - `header_environment` maps additional header names to environment-variable names.
 - literal `authorization`, `api-key`, and `x-api-key` values are rejected in `extra_headers`.
-- endpoint URLs containing user information are rejected.
+- endpoint URLs containing user information or fragments are rejected.
+- plain HTTP is limited to loopback hosts by default; a non-loopback HTTP endpoint requires an explicit `allow_insecure_http: true` declaration.
 - request traces never contain outbound headers.
 
-Set `require_api_key: false` only for an endpoint that intentionally accepts unauthenticated local requests.
+Set `require_api_key: false` only for an endpoint that intentionally accepts unauthenticated local requests. Prefer HTTPS whenever a credential or private source material leaves the workstation.
 
 ## Request and response evidence
 
@@ -81,7 +82,7 @@ Set `require_api_key: false` only for an endpoint that intentionally accepts una
 
 `redacted` is the default. It preserves prompt, tool-schema, and request-shape evidence without duplicating inline source-image bytes into the trace.
 
-`preserve_raw_responses: true` retains complete provider JSON responses. When false, the trace keeps response identifiers, usage, parsed output text, and executed tool calls without retaining the complete response object. The source pack's confidentiality and redistribution policy still governs whether a resulting trace may be published.
+`preserve_raw_responses: true` retains complete provider JSON responses. When false, successful traces keep response identifiers, usage, parsed output text, and executed tool calls without retaining the complete response object; HTTP and protocol-error bodies are replaced by their SHA-256 digest and byte count and are not copied into stderr. The source pack's confidentiality and redistribution policy still governs whether a resulting trace may be published.
 
 ## Function tools
 
@@ -125,7 +126,7 @@ Command tools:
 - preserve exit status, stdout, stderr, duration, timeout, and launch failures in the tool trace;
 - do not establish terminal success. Independent verification still decides what state exists.
 
-Tool names and parameter schemas are validated before the run. Strict schemas must describe an object and set `additionalProperties: false`.
+Tool names and parameter schemas are validated before the run. Command tools default to `strict: true`. Every object in a strict schema must set `additionalProperties: false`, and every declared property must appear in `required`; a logically optional value is represented as a required nullable field. Set `strict: false` only when a compatible endpoint or a deliberately open value shape cannot satisfy that subset. The built-in arbitrary-JSON artifact writer is intentionally non-strict; the other built-ins use strict-compatible schemas.
 
 ## Retry and budget semantics
 
