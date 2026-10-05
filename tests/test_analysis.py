@@ -92,9 +92,7 @@ def _score(stack: str, family: str, accepted: bool, attempt: int = 1) -> ScoreVi
         hard_contract_pass=accepted,
         semantic_acceptance=accepted,
         criterion_scores={"c": 4.0 if accepted else 1.0},
-        criterion_verdicts={
-            "c": JudgmentVerdict.ACCEPT if accepted else JudgmentVerdict.REJECT
-        },
+        criterion_verdicts={"c": JudgmentVerdict.ACCEPT if accepted else JudgmentVerdict.REJECT},
         reason_codes=[],
         candidate_metered_cost_usd=None,
         candidate_list_equivalent_cost_usd=1.0,

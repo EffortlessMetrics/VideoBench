@@ -419,8 +419,7 @@ def demo_command(
     study_summary = summarize_study(study, outcomes)
     if study_summary.notes:
         raise RuntimeError(
-            "Instrument validation study is incomplete or stale: "
-            + "; ".join(study_summary.notes)
+            "Instrument validation study is incomplete or stale: " + "; ".join(study_summary.notes)
         )
     write_envelope(output_dir / "study-summary.json", "study_summary", study_summary)
 

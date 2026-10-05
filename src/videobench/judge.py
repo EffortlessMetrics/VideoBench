@@ -256,8 +256,7 @@ def qualify_judge(
     }
     if unknown_case_criteria:
         raise ValueError(
-            "Qualification cases reference undeclared criteria: "
-            f"{sorted(unknown_case_criteria)}"
+            f"Qualification cases reference undeclared criteria: {sorted(unknown_case_criteria)}"
         )
     if set(observations) != case_ids:
         raise ValueError(

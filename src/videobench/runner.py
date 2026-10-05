@@ -253,9 +253,7 @@ def _require_empty_output_dir(output_dir: Path) -> None:
         if output_dir.is_symlink() or not output_dir.is_dir():
             raise ValueError(f"Output path must be a real directory: {output_dir}")
         if any(output_dir.iterdir()):
-            raise ValueError(
-                f"Output directory must be empty before a command run: {output_dir}"
-            )
+            raise ValueError(f"Output directory must be empty before a command run: {output_dir}")
     else:
         output_dir.mkdir(parents=True)
 
@@ -313,8 +311,7 @@ def run_command(
     overridden = reserved_env.intersection(extra_env or {})
     if overridden:
         raise ValueError(
-            "extra_env may not override VideoBench protocol variables: "
-            f"{sorted(overridden)}"
+            f"extra_env may not override VideoBench protocol variables: {sorted(overridden)}"
         )
 
     env = os.environ.copy()

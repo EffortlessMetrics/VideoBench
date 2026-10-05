@@ -33,9 +33,7 @@ def test_failed_qualification_grants_no_eligibility(example_root: Path) -> None:
     assert receipt.eligible_criteria == []
 
 
-def test_judge_transform_must_support_required_evidence(
-    example_root: Path, tmp_path: Path
-) -> None:
+def test_judge_transform_must_support_required_evidence(example_root: Path, tmp_path: Path) -> None:
     paths = compile_task_file(example_root / "task.yaml", tmp_path)
     pack = payload_as(paths.judge_pack, JudgePack, expected_kind="judge_pack")
     stack = load_model(example_root / "policies/judge-stack.yaml", JudgeStack)

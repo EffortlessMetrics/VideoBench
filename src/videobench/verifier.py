@@ -233,9 +233,7 @@ def verify_result(
         for item in results
         if item.severity == CheckSeverity.FATAL and item.status != CheckStatus.PASS
     ]
-    reason_codes = sorted(
-        {item.reason_code for item in results if item.status != CheckStatus.PASS}
-    )
+    reason_codes = sorted({item.reason_code for item in results if item.status != CheckStatus.PASS})
 
     return VerificationBundle(
         task_id=result.task_id,

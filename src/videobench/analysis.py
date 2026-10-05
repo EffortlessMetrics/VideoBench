@@ -50,8 +50,7 @@ def _semantic_acceptance(judgment: JudgmentBundle, scoring: ScoringPolicy) -> bo
     if judgment.fatal_semantic_failure:
         return False
     if any(
-        item.verdict
-        in {JudgmentVerdict.INDETERMINATE, JudgmentVerdict.INSUFFICIENT_BASIS}
+        item.verdict in {JudgmentVerdict.INDETERMINATE, JudgmentVerdict.INSUFFICIENT_BASIS}
         for item in judgment.criteria
     ):
         return False
@@ -222,9 +221,7 @@ def score_result(
         criterion_verdicts={item.criterion_id: item.verdict for item in criteria},
         reason_codes=sorted(reason_codes),
         candidate_metered_cost_usd=result.usage.actual_candidate_cost_usd,
-        candidate_list_equivalent_cost_usd=calculate_list_equivalent_cost(
-            result, pricing_policy
-        ),
+        candidate_list_equivalent_cost_usd=calculate_list_equivalent_cost(result, pricing_policy),
         judge_cost_usd=judge_cost_usd,
         input_tokens=result.usage.input_tokens,
         output_tokens=result.usage.output_tokens,
