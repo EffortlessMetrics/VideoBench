@@ -1,0 +1,33 @@
++ check JSON Schema drift
++ /opt/hostedtoolcache/Python/3.13.15/x64/bin/python -m ruff format --check .
+62 files already formatted
++ /opt/hostedtoolcache/Python/3.13.15/x64/bin/python -m ruff check .
+All checks passed!
++ /opt/hostedtoolcache/Python/3.13.15/x64/bin/python -m mypy src/videobench
+src/videobench/verifier.py:124: error: Incompatible types in assignment (expression has type "str", variable has type "int")  [assignment]
+src/videobench/verifier.py:127: error: Unsupported operand types for in ("int" and "str")  [operator]
+src/videobench/verifier.py:128: error: Unsupported operand types for in ("int" and "str")  [operator]
+src/videobench/verifier.py:181: error: Argument "check_type" to "ObjectiveCheckSpec" has incompatible type "str"; expected "CheckType"  [arg-type]
+src/videobench/adapters/openai_compatible.py:706: error: Dict entry 0 has incompatible type "str": "Any | None"; expected "str": "str"  [dict-item]
+src/videobench/adapters/openai_compatible.py:706: error: Dict entry 1 has incompatible type "str": "Any | None"; expected "str": "str"  [dict-item]
+src/videobench/adapters/openai_compatible.py:706: error: Dict entry 2 has incompatible type "str": "Any | None"; expected "str": "str"  [dict-item]
+src/videobench/adapters/openai_compatible.py:939: error: Dict entry 0 has incompatible type "str": "str"; expected "str": "int"  [dict-item]
+src/videobench/adapters/openai_compatible.py:1384: error: Argument 1 to "UsageRecord" has incompatible type "**dict[str, int | None]"; expected "int"  [arg-type]
+src/videobench/adapters/openai_compatible.py:1384: error: Argument 1 to "UsageRecord" has incompatible type "**dict[str, int | None]"; expected "float"  [arg-type]
+src/videobench/runner.py:143: error: Dict entry 0 has incompatible type "str": "str"; expected "str": "float | int"  [dict-item]
+src/videobench/runner.py:150: error: Dict entry 0 has incompatible type "str": "str"; expected "str": "float | int"  [dict-item]
+Found 12 errors in 3 files (checked 18 source files)
+Traceback (most recent call last):
+  File "/home/runner/work/VideoBench/VideoBench/scripts/check.py", line 80, in <module>
+    main()
+    ~~~~^^
+  File "/home/runner/work/VideoBench/VideoBench/scripts/check.py", line 55, in main
+    run(sys.executable, "-m", "mypy", "src/videobench")
+    ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/VideoBench/VideoBench/scripts/check.py", line 23, in run
+    subprocess.run(command, cwd=ROOT, env=environment, check=True)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.13.15/x64/lib/python3.13/subprocess.py", line 577, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '('/opt/hostedtoolcache/Python/3.13.15/x64/bin/python', '-m', 'mypy', 'src/videobench')' returned non-zero exit status 1.
