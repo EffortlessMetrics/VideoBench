@@ -31,7 +31,7 @@ jobs:
           gzip --decompress --stdout /tmp/provider-hardening.patch.gz > /tmp/provider-hardening.patch
           git apply --check /tmp/provider-hardening.patch
           git apply --index /tmp/provider-hardening.patch
-          git rm .videobench-bootstrap/provider-hardening.patch.gz.b64
+          git rm -r .videobench-bootstrap
           git rm .github/workflows/apply-provider-hardening.yml
           git config user.name EffortlessSteven
           git config user.email 15812269+EffortlessSteven@users.noreply.github.com
