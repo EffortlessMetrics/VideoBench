@@ -4,6 +4,7 @@ api_style: responses
 api_key_env: OPENAI_API_KEY
 require_api_key: true
 store: false
+responses_include: [reasoning.encrypted_content]
 request_trace_mode: redacted
 max_model_calls: 8
 max_tool_calls: 64

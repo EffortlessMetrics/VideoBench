@@ -19,7 +19,11 @@ null = not established by the run evidence
 0    = established zero
 ```
 
-List-equivalent cost is nullable. If a frozen pricing policy assigns a nonzero rate to a dimension whose usage is unknown, the total is unknown. A zero-priced unknown dimension does not block the total under that policy.
+List-equivalent cost is nullable. If a frozen pricing policy requires a total
+or subset whose usage is unknown, the total is unknown. Cached input and
+reasoning are subsets of inclusive input and output totals; different ordinary
+and subset rates require both values so the projection can partition rather
+than double-price them.
 
 Locally observable counts and durations may retain numeric zero defaults when the runner itself can establish them.
 
@@ -28,6 +32,7 @@ Locally observable counts and durations may retain numeric zero defaults when th
 - adapters must preserve missing usage explicitly;
 - reports distinguish priced and unpriced attempts;
 - study summaries state economic-evidence coverage;
-- cost limits cannot be claimed enforced when candidate cost is unavailable;
+- a configured limit cannot be claimed enforced when its required usage is
+  unavailable; an otherwise successful attempt is `not_proven`, not accepted;
 - old evidence can be repriced only to the extent its raw usage supports the new policy;
 - `$0.00` is reserved for an evidenced zero, not a missing receipt.

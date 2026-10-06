@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import http.client
 import json
+import shutil
+import subprocess
 import sys
 import threading
 import urllib.error
@@ -11,6 +14,7 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
+import videobench.adapters.openai_compatible as openai_adapter
 from videobench.adapters.openai_compatible import (
     ChatMaxTokensField,
     CommandToolSpec,
@@ -107,6 +111,7 @@ def _config(**changes: Any) -> OpenAICompatibleConfig:
     values: dict[str, Any] = {
         "adapter_id": "test-adapter",
         "endpoint": "https://provider.example/v1/responses",
+        "api_key_env": None,
         "require_api_key": False,
         "transport_max_attempts": 1,
         "transport_backoff_seconds": [],
@@ -127,7 +132,7 @@ def test_responses_run_captures_usage_trace_and_final_text(
         execution_pack=execution,
         run_stack=stack,
         run_condition=condition,
-        config=_config(),
+        config=_config(api_key_env="OPENAI_API_KEY"),
         asset_root=example_root,
         workspace=tmp_path / "workspace",
         output_dir=tmp_path / "output",
@@ -220,6 +225,7 @@ def test_chat_completions_inlines_image_and_preserves_chat_usage(
     example_root: Path, tmp_path: Path
 ) -> None:
     pack_path, execution, stack, condition = _compiled(example_root, tmp_path)
+    shutil.copytree(example_root / "assets", tmp_path / "assets")
     image = tmp_path / "pixel.png"
     image.write_bytes(b"\x89PNG\r\n\x1a\nsynthetic")
     execution.assets.append(
@@ -545,7 +551,7 @@ def test_missing_required_api_key_is_environment_blocked(
         execution_pack=execution,
         run_stack=stack,
         run_condition=condition,
-        config=_config(require_api_key=True),
+        config=_config(require_api_key=True, api_key_env="OPENAI_API_KEY"),
         asset_root=example_root,
         workspace=tmp_path / "workspace",
         output_dir=tmp_path / "output",
@@ -1124,3 +1130,547 @@ def test_raw_response_opt_out_preserves_digest_not_error_body(
     assert request["response_bytes"] == len(secret_body)
     assert request["response_sha256"]
     assert "private-provider-detail" not in json.dumps(trace)
+
+
+
+def test_incomplete_responses_output_is_not_proven(example_root: Path, tmp_path: Path) -> None:
+    pack_path, execution, stack, condition = _compiled(example_root, tmp_path)
+    response = _response(
+        {
+            "id": "resp-incomplete",
+            "status": "incomplete",
+            "incomplete_details": {"reason": "max_output_tokens"},
+            "output": [{"type": "message", "content": [{"type": "output_text", "text": "partial"}]}],
+            "usage": {"input_tokens": 10, "output_tokens": 4},
+        }
+    )
+    result = run_openai_compatible(
+        execution_pack_path=pack_path,
+        execution_pack=execution,
+        run_stack=stack,
+        run_condition=condition,
+        config=_config(),
+        asset_root=example_root,
+        workspace=tmp_path / "workspace",
+        output_dir=tmp_path / "output",
+        transport=FakeTransport([response]),
+    )
+    assert result.outcome == OutcomeStatus.NOT_PROVEN
+    assert "max_output_tokens" in result.stderr
+    assert not (tmp_path / "output/provider/final.txt").exists()
+    assert any(event.event_type == "provider_response_incomplete" for event in result.events)
+
+
+def test_chat_length_finish_is_not_proven(example_root: Path, tmp_path: Path) -> None:
+    pack_path, execution, stack, condition = _compiled(example_root, tmp_path)
+    response = _response(
+        {
+            "choices": [
+                {
+                    "finish_reason": "length",
+                    "message": {"role": "assistant", "content": "partial"},
+                }
+            ],
+            "usage": {"prompt_tokens": 10, "completion_tokens": 4},
+        }
+    )
+    result = run_openai_compatible(
+        execution_pack_path=pack_path,
+        execution_pack=execution,
+        run_stack=stack,
+        run_condition=condition,
+        config=_config(api_style=OpenAIAPIStyle.CHAT_COMPLETIONS),
+        asset_root=example_root,
+        workspace=tmp_path / "workspace",
+        output_dir=tmp_path / "output",
+        transport=FakeTransport([response]),
+    )
+    assert result.outcome == OutcomeStatus.NOT_PROVEN
+    assert "finish_reason was length" in result.stderr
+
+
+def test_retry_usage_and_each_attempt_are_preserved(example_root: Path, tmp_path: Path) -> None:
+    pack_path, execution, stack, condition = _compiled(example_root, tmp_path)
+    retry = _response(
+        {"id": "retry-response", "error": "busy", "usage": {"input_tokens": 40, "output_tokens": 10}},
+        status=429,
+        **{"x-request-id": "retry-request", "retry-after": "0"},
+    )
+    result = run_openai_compatible(
+        execution_pack_path=pack_path,
+        execution_pack=execution,
+        run_stack=stack,
+        run_condition=condition,
+        config=_config(transport_max_attempts=2),
+        asset_root=example_root,
+        workspace=tmp_path / "workspace",
+        output_dir=tmp_path / "output",
+        transport=FakeTransport([retry, _final_response()]),
+        sleep=lambda _: None,
+    )
+    assert result.outcome == OutcomeStatus.PASS
+    assert result.usage.input_tokens == 140
+    assert result.usage.output_tokens == 35
+    trace = json.loads((tmp_path / "output/provider/trace.json").read_text())
+    assert [item["transport_attempt"] for item in trace["requests"]] == [1, 2]
+    assert trace["requests"][0]["request_id"] == "retry-request"
+    assert "retry-response" in trace["usage"]["metadata"]["provider_response_ids"]
+
+
+def test_unmetered_retry_makes_totals_unknown(example_root: Path, tmp_path: Path) -> None:
+    pack_path, execution, stack, condition = _compiled(example_root, tmp_path)
+    retry = _response({"error": "busy"}, status=503, **{"retry-after": "0"})
+    result = run_openai_compatible(
+        execution_pack_path=pack_path,
+        execution_pack=execution,
+        run_stack=stack,
+        run_condition=condition,
+        config=_config(transport_max_attempts=2),
+        asset_root=example_root,
+        workspace=tmp_path / "workspace",
+        output_dir=tmp_path / "output",
+        transport=FakeTransport([retry, _final_response()]),
+        sleep=lambda _: None,
+    )
+    assert result.outcome == OutcomeStatus.PASS
+    assert result.usage.input_tokens is None
+    assert result.usage.output_tokens is None
+
+
+def test_failed_request_without_usage_is_unknown_not_zero(
+    example_root: Path, tmp_path: Path
+) -> None:
+    pack_path, execution, stack, condition = _compiled(example_root, tmp_path)
+    result = run_openai_compatible(
+        execution_pack_path=pack_path,
+        execution_pack=execution,
+        run_stack=stack,
+        run_condition=condition,
+        config=_config(),
+        asset_root=example_root,
+        workspace=tmp_path / "workspace",
+        output_dir=tmp_path / "output",
+        transport=FakeTransport([_response({"error": "denied"}, status=403)]),
+    )
+    assert result.outcome == OutcomeStatus.TOOL_FAILURE
+    assert result.usage.input_tokens is None
+    assert result.usage.output_tokens is None
+
+
+@pytest.mark.parametrize("bad_value", [True, "100", -1, 1.5])
+def test_malformed_usage_is_protocol_invalid(
+    example_root: Path, tmp_path: Path, bad_value: object
+) -> None:
+    pack_path, execution, stack, condition = _compiled(example_root, tmp_path)
+    response = _response(
+        {
+            "status": "completed",
+            "output": [],
+            "usage": {"input_tokens": bad_value, "output_tokens": 1},
+        }
+    )
+    result = run_openai_compatible(
+        execution_pack_path=pack_path,
+        execution_pack=execution,
+        run_stack=stack,
+        run_condition=condition,
+        config=_config(),
+        asset_root=example_root,
+        workspace=tmp_path / "workspace",
+        output_dir=tmp_path / f"output-{str(bad_value).replace('/', '-')}",
+        transport=FakeTransport([response]),
+    )
+    assert result.outcome == OutcomeStatus.PROTOCOL_INVALID
+    assert result.usage.input_tokens is None
+
+
+def test_timeout_partial_bytes_are_serializable(
+    example_root: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pack_path, execution, stack, condition = _compiled(example_root, tmp_path)
+
+    def timeout_with_partial_output(*args: Any, **kwargs: Any) -> None:
+        del args, kwargs
+        raise subprocess.TimeoutExpired(
+            cmd=["partial_timeout"],
+            timeout=0.2,
+            output=b"progress\n",
+            stderr=b"warning\n",
+        )
+
+    monkeypatch.setattr(openai_adapter.subprocess, "run", timeout_with_partial_output)
+    first = _response(
+        {
+            "output": [
+                {
+                    "type": "function_call",
+                    "name": "partial_timeout",
+                    "arguments": "{}",
+                    "call_id": "timeout-partial",
+                }
+            ]
+        }
+    )
+    parameters = {"type": "object", "properties": {}, "additionalProperties": False}
+    result = run_openai_compatible(
+        execution_pack_path=pack_path,
+        execution_pack=execution,
+        run_stack=stack,
+        run_condition=condition,
+        config=_config(
+            command_tools=[
+                CommandToolSpec(
+                    name="partial_timeout",
+                    description="print and sleep",
+                    parameters=parameters,
+                    command=[
+                        sys.executable,
+                        "-c",
+                        "import time; print('progress', flush=True); time.sleep(1)",
+                    ],
+                    timeout_seconds=0.2,
+                )
+            ]
+        ),
+        asset_root=example_root,
+        workspace=tmp_path / "workspace",
+        output_dir=tmp_path / "output",
+        transport=FakeTransport([first, _final_response()]),
+    )
+    assert result.outcome == OutcomeStatus.PASS
+    trace = json.loads((tmp_path / "output/provider/trace.json").read_text())
+    tool = trace["tool_calls"][0]["result"]
+    assert tool["error"] == "tool_timeout"
+    assert "progress" in tool["stdout"]
+
+
+def test_disabled_builtin_tools_cannot_execute(example_root: Path, tmp_path: Path) -> None:
+    pack_path, execution, stack, condition = _compiled(example_root, tmp_path)
+    first = _response(
+        {
+            "output": [
+                {
+                    "type": "function_call",
+                    "name": "videobench_write_text_artifact",
+                    "arguments": json.dumps({"path": "forbidden.txt", "content": "no"}),
+                    "call_id": "disabled-1",
+                }
+            ]
+        }
+    )
+    result = run_openai_compatible(
+        execution_pack_path=pack_path,
+        execution_pack=execution,
+        run_stack=stack,
+        run_condition=condition,
+        config=_config(enable_artifact_tools=False),
+        asset_root=example_root,
+        workspace=tmp_path / "workspace",
+        output_dir=tmp_path / "output",
+        transport=FakeTransport([first, _final_response()]),
+    )
+    assert result.outcome == OutcomeStatus.PASS
+    assert not (tmp_path / "output/forbidden.txt").exists()
+    trace = json.loads((tmp_path / "output/provider/trace.json").read_text())
+    assert trace["tool_calls"][0]["result"]["error"] == "tool_disabled"
+
+
+def test_command_arguments_are_schema_validated_before_execution(
+    example_root: Path, tmp_path: Path
+) -> None:
+    pack_path, execution, stack, condition = _compiled(example_root, tmp_path)
+    marker = tmp_path / "executed.txt"
+    script = tmp_path / "command.py"
+    script.write_text(
+        f"from pathlib import Path\nPath({str(marker)!r}).write_text('executed')\n",
+        encoding="utf-8",
+    )
+    first = _response(
+        {
+            "output": [
+                {
+                    "type": "function_call",
+                    "name": "typed_tool",
+                    "arguments": json.dumps({"value": 123}),
+                    "call_id": "typed-1",
+                }
+            ]
+        }
+    )
+    result = run_openai_compatible(
+        execution_pack_path=pack_path,
+        execution_pack=execution,
+        run_stack=stack,
+        run_condition=condition,
+        config=_config(
+            command_tools=[
+                CommandToolSpec(
+                    name="typed_tool",
+                    description="requires a string",
+                    parameters={
+                        "type": "object",
+                        "properties": {"value": {"type": "string"}},
+                        "required": ["value"],
+                        "additionalProperties": False,
+                    },
+                    command=[sys.executable, str(script)],
+                )
+            ]
+        ),
+        asset_root=example_root,
+        workspace=tmp_path / "workspace",
+        output_dir=tmp_path / "output",
+        transport=FakeTransport([first, _final_response()]),
+    )
+    assert result.outcome == OutcomeStatus.PASS
+    assert not marker.exists()
+    trace = json.loads((tmp_path / "output/provider/trace.json").read_text())
+    assert trace["tool_calls"][0]["result"]["error"] == "tool_arguments_schema_violation"
+
+
+def test_asset_digest_is_reverified_before_provider_request(
+    example_root: Path, tmp_path: Path
+) -> None:
+    pack_path, execution, stack, condition = _compiled(example_root, tmp_path)
+    copied_assets = tmp_path / "assets"
+    shutil.copytree(example_root, copied_assets)
+    transcript = next(item for item in execution.assets if item.asset_id == "transcript")
+    (copied_assets / transcript.path).write_text("tampered", encoding="utf-8")
+    transport = FakeTransport([_final_response()])
+    result = run_openai_compatible(
+        execution_pack_path=pack_path,
+        execution_pack=execution,
+        run_stack=stack,
+        run_condition=condition,
+        config=_config(),
+        asset_root=copied_assets,
+        workspace=tmp_path / "workspace",
+        output_dir=tmp_path / "output",
+        transport=transport,
+    )
+    assert result.outcome == OutcomeStatus.PROTOCOL_INVALID
+    assert "digest mismatch" in result.stderr
+    assert transport.requests == []
+
+
+def test_candidate_reserved_path_collision_is_preserved_and_rejected(
+    example_root: Path, tmp_path: Path
+) -> None:
+    pack_path, execution, stack, condition = _compiled(example_root, tmp_path)
+    script = tmp_path / "collision.py"
+    script.write_text(
+        "import os\nfrom pathlib import Path\n"
+        "p=Path(os.environ['VIDEOBENCH_OUTPUT_DIR'])/'provider'/'trace.json'\n"
+        "p.parent.mkdir(parents=True, exist_ok=True)\np.write_text('candidate')\n",
+        encoding="utf-8",
+    )
+    first = _response(
+        {
+            "output": [
+                {
+                    "type": "function_call",
+                    "name": "write_collision",
+                    "arguments": "{}",
+                    "call_id": "collision-1",
+                }
+            ]
+        }
+    )
+    parameters = {"type": "object", "properties": {}, "additionalProperties": False}
+    result = run_openai_compatible(
+        execution_pack_path=pack_path,
+        execution_pack=execution,
+        run_stack=stack,
+        run_condition=condition,
+        config=_config(
+            command_tools=[
+                CommandToolSpec(
+                    name="write_collision",
+                    description="write reserved path",
+                    parameters=parameters,
+                    command=[sys.executable, str(script)],
+                )
+            ]
+        ),
+        asset_root=example_root,
+        workspace=tmp_path / "workspace",
+        output_dir=tmp_path / "output",
+        transport=FakeTransport([first, _final_response()]),
+    )
+    assert result.outcome == OutcomeStatus.PROTOCOL_INVALID
+    trace = json.loads((tmp_path / "output/provider/trace.json").read_text())
+    preserved = trace["reserved_path_collisions"][0]["preserved_as"]
+    assert (tmp_path / "output" / preserved).read_text() == "candidate"
+
+
+def test_declared_deliverable_cannot_overlap_adapter_evidence(
+    example_root: Path, tmp_path: Path
+) -> None:
+    pack_path, execution, stack, condition = _compiled(example_root, tmp_path)
+    execution.output_contract.deliverables[0].path = "provider/trace.json"
+    write_envelope(pack_path, "execution_pack", execution)
+    with pytest.raises(ValueError, match="collide with declared deliverables"):
+        run_openai_compatible(
+            execution_pack_path=pack_path,
+            execution_pack=execution,
+            run_stack=stack,
+            run_condition=condition,
+            config=_config(),
+            asset_root=example_root,
+            workspace=tmp_path / "workspace",
+            output_dir=tmp_path / "output",
+            transport=FakeTransport([]),
+        )
+
+
+def test_endpoint_query_and_provider_echoed_secrets_are_redacted(
+    example_root: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pack_path, execution, stack, condition = _compiled(example_root, tmp_path)
+    monkeypatch.setenv("TEST_PROVIDER_KEY", "super-secret")
+    endpoint = "https://provider.example/v1/responses?api-version=secret-version"
+    transport = FakeTransport(
+        [
+            _response(
+                {"error": "super-secret secret-version"},
+                status=400,
+                **{"x-request-id": "error-request"},
+            )
+        ]
+    )
+    result = run_openai_compatible(
+        execution_pack_path=pack_path,
+        execution_pack=execution,
+        run_stack=stack,
+        run_condition=condition,
+        config=_config(
+            endpoint=endpoint,
+            api_key_env="TEST_PROVIDER_KEY",
+            require_api_key=True,
+        ),
+        asset_root=example_root,
+        workspace=tmp_path / "workspace",
+        output_dir=tmp_path / "output",
+        transport=transport,
+    )
+    assert transport.requests[0]["url"] == endpoint
+    durable = (tmp_path / "output/provider/trace.json").read_text()
+    assert "super-secret" not in durable
+    assert "secret-version" not in durable
+    assert "super-secret" not in result.stderr
+    assert "secret-version" not in result.stderr
+    assert result.usage.metadata["endpoint"] == "https://provider.example/v1/responses"
+
+
+def test_plain_http_rejects_any_credential_source() -> None:
+    with pytest.raises(ValidationError, match="credentialed provider requests require HTTPS"):
+        _config(
+            endpoint="http://127.0.0.1:8000/v1/responses",
+            api_key_env="OPENAI_API_KEY",
+        )
+    with pytest.raises(ValidationError, match="credentialed provider requests require HTTPS"):
+        _config(
+            endpoint="http://127.0.0.1:8000/v1/responses",
+            header_environment={"x-private": "PRIVATE_HEADER"},
+        )
+
+
+def test_redirect_is_not_followed() -> None:
+    target_hits: list[str] = []
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_POST(self) -> None:
+            if self.path == "/start":
+                self.send_response(302)
+                self.send_header("location", "/target")
+                self.end_headers()
+                return
+            target_hits.append(self.path)
+            self.send_response(200)
+            self.end_headers()
+
+        def log_message(self, format: str, *args: Any) -> None:
+            del format, args
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    host, port = server.server_address
+    try:
+        response = UrllibTransport().post(
+            url=f"http://{host}:{port}/start",
+            headers={"content-type": "application/json"},
+            body=b"{}",
+            timeout_seconds=2,
+        )
+    finally:
+        server.shutdown()
+        thread.join(timeout=2)
+        server.server_close()
+    assert response.status == 302
+    assert target_hits == []
+
+
+def test_urllib_transport_wraps_http_protocol_errors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fail(*args: Any, **kwargs: Any) -> None:
+        del args, kwargs
+        raise http.client.BadStatusLine("broken")
+
+    monkeypatch.setattr(openai_adapter._OPENER, "open", fail)
+    with pytest.raises(ProviderTransportError, match="BadStatusLine"):
+        UrllibTransport().post(
+            url="https://provider.example/v1/responses",
+            headers={},
+            body=b"{}",
+            timeout_seconds=1,
+        )
+
+
+def test_retry_after_is_finite_and_capped() -> None:
+    config = _config(max_retry_after_seconds=0.25, transport_backoff_seconds=[0.1])
+    assert openai_adapter._retry_delay(config, 0, {"retry-after": "86400"}) == 0.25
+    assert openai_adapter._retry_delay(config, 0, {"retry-after": "inf"}) == 0.1
+
+
+def test_stateless_responses_replay_only_self_contained_reasoning(
+    example_root: Path, tmp_path: Path
+) -> None:
+    pack_path, execution, stack, condition = _compiled(example_root, tmp_path)
+    first = _response(
+        {
+            "status": "completed",
+            "output": [
+                {"type": "reasoning", "id": "rs-drop", "encrypted_content": None},
+                {"type": "reasoning", "id": "rs-keep", "encrypted_content": "ciphertext"},
+                {
+                    "type": "function_call",
+                    "name": "videobench_write_text_artifact",
+                    "arguments": json.dumps({"path": "reasoning.txt", "content": "ok"}),
+                    "call_id": "reasoning-call",
+                },
+            ],
+        }
+    )
+    transport = FakeTransport([first, _final_response()])
+    result = run_openai_compatible(
+        execution_pack_path=pack_path,
+        execution_pack=execution,
+        run_stack=stack,
+        run_condition=condition,
+        config=_config(
+            store=False,
+            reasoning_effort="medium",
+            responses_include=["reasoning.encrypted_content"],
+        ),
+        asset_root=example_root,
+        workspace=tmp_path / "workspace",
+        output_dir=tmp_path / "output",
+        transport=transport,
+    )
+    assert result.outcome == OutcomeStatus.PASS
+    assert transport.requests[0]["body"]["include"] == ["reasoning.encrypted_content"]
+    replay = transport.requests[1]["body"]["input"]
+    ids = [item.get("id") for item in replay if item.get("type") == "reasoning"]
+    assert ids == ["rs-keep"]

@@ -39,17 +39,52 @@ def calculate_list_equivalent_cost(result: WorkResultBundle, policy: PricingPoli
     usage = result.usage
     pricing = policy.pricing
     million = 1_000_000
-    dimensions: list[tuple[float | int | None, float, float]] = [
-        (usage.input_tokens, pricing.input_per_million_usd, million),
-        (usage.cached_input_tokens, pricing.cached_input_per_million_usd, million),
+
+    def inclusive_partition_cost(
+        *,
+        total_value: int | None,
+        subset_value: int | None,
+        total_rate: float,
+        subset_rate: float,
+    ) -> float | None:
+        if total_rate == 0 and subset_rate == 0:
+            return 0.0
+        if total_value is None:
+            if total_rate == 0 and subset_value is not None:
+                return subset_value / million * subset_rate
+            return None
+        if subset_value is None:
+            if total_rate == subset_rate:
+                return total_value / million * total_rate
+            return None
+        if subset_value > total_value:
+            raise ValueError("priced token subset exceeds its inclusive total")
+        return (
+            (total_value - subset_value) / million * total_rate
+            + subset_value / million * subset_rate
+        )
+
+    input_cost = inclusive_partition_cost(
+        total_value=usage.input_tokens,
+        subset_value=usage.cached_input_tokens,
+        total_rate=pricing.input_per_million_usd,
+        subset_rate=pricing.cached_input_per_million_usd,
+    )
+    output_cost = inclusive_partition_cost(
+        total_value=usage.output_tokens,
+        subset_value=usage.reasoning_tokens,
+        total_rate=pricing.output_per_million_usd,
+        subset_rate=pricing.reasoning_per_million_usd,
+    )
+    if input_cost is None or output_cost is None:
+        return None
+
+    total = usage.model_calls * pricing.per_call_usd + input_cost + output_cost
+    for value, rate, divisor in (
         (usage.cache_write_tokens, pricing.cache_write_per_million_usd, million),
-        (usage.reasoning_tokens, pricing.reasoning_per_million_usd, million),
-        (usage.output_tokens, pricing.output_per_million_usd, million),
         (usage.image_units, pricing.image_unit_usd, 1.0),
         (usage.video_units, pricing.video_unit_usd, 1.0),
-    ]
-    total = usage.model_calls * pricing.per_call_usd
-    for value, rate, divisor in dimensions:
+    ):
         if rate == 0:
             continue
         if value is None:

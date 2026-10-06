@@ -1,6 +1,6 @@
 {
   "additionalProperties": false,
-  "description": "Raw resource evidence for one attempt.\n\nProvider-metered dimensions are optional on purpose. ``None`` means the surface did\nnot expose enough evidence to establish the value; it must never be interpreted as\nzero. Locally observable counts and durations retain concrete zero defaults.",
+  "description": "Raw resource evidence for one attempt.\n\nProvider-metered dimensions are optional on purpose. ``None`` means the surface did\nnot expose enough evidence to establish the value; it must never be interpreted as\nzero. ``input_tokens`` and ``output_tokens`` retain provider-reported inclusive totals;\ncached-input and reasoning counts are subsets used to partition those totals under a\npricing policy. Locally observable counts and durations retain concrete zero defaults.",
   "properties": {
     "active_agent_seconds": {
       "anyOf": [

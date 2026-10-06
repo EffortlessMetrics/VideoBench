@@ -70,7 +70,7 @@ def test_pricing_preserves_token_categories() -> None:
         output_tokens=1_000_000,
         model_calls=2,
     )
-    assert calculate_list_equivalent_cost(_result(usage), policy) == 8.1
+    assert calculate_list_equivalent_cost(_result(usage), policy) == 5.1
 
 
 def _score(stack: str, family: str, accepted: bool, attempt: int = 1) -> ScoreView:
@@ -229,3 +229,50 @@ def test_study_preserves_missing_economic_evidence() -> None:
     assert summary.summaries[0].priced_attempts == 0
     assert summary.summaries[0].mean_list_equivalent_cost_usd is None
     assert any("Incomplete economics" in note for note in summary.notes)
+
+
+def test_pricing_requires_subset_evidence_when_rates_differ() -> None:
+    policy = PricingPolicy(
+        policy_id="p-partition",
+        effective_date="2026-10-06",
+        provider="p",
+        model="m",
+        pricing=TokenPricing(
+            input_per_million_usd=2.0,
+            cached_input_per_million_usd=0.2,
+            output_per_million_usd=4.0,
+            reasoning_per_million_usd=8.0,
+        ),
+        source_note="test",
+    )
+    usage = UsageRecord(
+        input_tokens=1_000_000,
+        cached_input_tokens=None,
+        output_tokens=1_000_000,
+        reasoning_tokens=100_000,
+    )
+    assert calculate_list_equivalent_cost(_result(usage), policy) is None
+
+
+def test_pricing_partitions_inclusive_input_and_output_totals() -> None:
+    policy = PricingPolicy(
+        policy_id="p-inclusive",
+        effective_date="2026-10-06",
+        provider="p",
+        model="m",
+        pricing=TokenPricing(
+            input_per_million_usd=2.0,
+            cached_input_per_million_usd=0.2,
+            output_per_million_usd=4.0,
+            reasoning_per_million_usd=8.0,
+        ),
+        source_note="test",
+    )
+    usage = UsageRecord(
+        input_tokens=1_000_000,
+        cached_input_tokens=250_000,
+        output_tokens=500_000,
+        reasoning_tokens=100_000,
+    )
+    expected = 0.75 * 2.0 + 0.25 * 0.2 + 0.4 * 4.0 + 0.1 * 8.0
+    assert calculate_list_equivalent_cost(_result(usage), policy) == expected

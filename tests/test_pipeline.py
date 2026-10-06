@@ -41,7 +41,7 @@ def _evaluate(example_root: Path, tmp_path: Path, candidate: str):
         usage=UsageRecord(
             input_tokens=1000,
             reasoning_tokens=200,
-            output_tokens=100,
+            output_tokens=300,
             model_calls=1,
             tool_calls=4,
             actual_candidate_cost_usd=0.01,

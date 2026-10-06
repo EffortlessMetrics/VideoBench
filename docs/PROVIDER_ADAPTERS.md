@@ -38,6 +38,7 @@ api_style: responses
 api_key_env: OPENAI_API_KEY
 require_api_key: true
 store: false
+responses_include: [reasoning.encrypted_content]
 request_trace_mode: redacted
 max_model_calls: 8
 max_tool_calls: 64
@@ -49,6 +50,7 @@ A local Chat Completions-compatible endpoint can omit authentication and provide
 adapter_id: local-chat-v1
 endpoint: http://127.0.0.1:8000/v1/chat/completions
 api_style: chat_completions
+api_key_env: null
 require_api_key: false
 store: null
 chat_max_tokens_field: max_tokens
@@ -61,12 +63,21 @@ request_trace_mode: redacted
 
 Secrets come from environment variables.
 
-- `api_key_env` supplies the bearer token.
+- `api_key_env` supplies the bearer token. Set it to `null` for a deliberately
+  key-free endpoint; `require_api_key: false` alone does not opt out of
+  ambient-key lookup.
 - `header_environment` maps additional header names to environment-variable names.
 - literal `authorization`, `api-key`, and `x-api-key` values are rejected in `extra_headers`.
 - endpoint URLs containing user information or fragments are rejected.
-- plain HTTP is limited to loopback hosts by default; a non-loopback HTTP endpoint requires an explicit `allow_insecure_http: true` declaration.
-- request traces never contain outbound headers.
+- plain HTTP is limited to loopback hosts by default; a non-loopback HTTP
+  endpoint requires an explicit `allow_insecure_http: true` declaration;
+- credential-bearing requests are never sent over plain HTTP;
+- redirects are rejected rather than forwarding prompts or credentials to an
+  undeclared destination;
+- request traces never contain outbound headers;
+- endpoint query strings are used for the request but removed from durable
+  endpoint metadata; query values and environment-backed header values are
+  treated as secrets for response and error redaction.
 
 Set `require_api_key: false` only for an endpoint that intentionally accepts unauthenticated local requests. Prefer HTTPS whenever a credential or private source material leaves the workstation.
 
@@ -82,7 +93,19 @@ Set `require_api_key: false` only for an endpoint that intentionally accepts una
 
 `redacted` is the default. It preserves prompt, tool-schema, and request-shape evidence without duplicating inline source-image bytes into the trace.
 
-`preserve_raw_responses: true` retains complete provider JSON responses. When false, successful traces keep response identifiers, usage, parsed output text, and executed tool calls without retaining the complete response object; HTTP and protocol-error bodies are replaced by their SHA-256 digest and byte count and are not copied into stderr. The source pack's confidentiality and redistribution policy still governs whether a resulting trace may be published.
+`preserve_raw_responses: true` retains provider JSON responses after configured
+credentials and endpoint-query values have been redacted. When false, successful
+traces keep response identifiers, usage, parsed output text, response byte count,
+and response digest without retaining the complete response object; HTTP and
+protocol-error bodies are likewise represented by digest and byte count and are
+not copied into stderr. The source pack's confidentiality and redistribution
+policy still governs whether a resulting trace may be published.
+
+Adapter-owned `final_text_path` and `trace_path` are reserved. Declared
+deliverables may not overlap them. A direct command that nevertheless writes
+there is not allowed to destroy the attempt receipt: VideoBench moves the
+candidate bytes into a quarantine path, marks the attempt `protocol_invalid`,
+and writes its own evidence.
 
 ## Function tools
 
@@ -119,6 +142,8 @@ command_tools:
 
 Command tools:
 
+- validate every model-supplied argument object against the declared JSON
+  Schema before process launch;
 - execute without a shell;
 - receive one JSON object on standard input;
 - receive only a small baseline environment plus explicitly allowed variables;
@@ -128,15 +153,37 @@ Command tools:
 
 Tool names and parameter schemas are validated before the run. Command tools default to `strict: true`. Every object in a strict schema must set `additionalProperties: false`, and every declared property must appear in `required`; a logically optional value is represented as a required nullable field. Set `strict: false` only when a compatible endpoint or a deliberately open value shape cannot satisfy that subset. The built-in arbitrary-JSON artifact writer is intentionally non-strict; the other built-ins use strict-compatible schemas.
 
-A non-strict command wrapper remains responsible for validating the arguments it accepts. `strict: false` changes provider-side schema enforcement; it does not weaken VideoBench's independent terminal-state verification.
+A non-strict command wrapper still receives local JSON-Schema validation.
+`strict: false` changes only the schema subset advertised to the provider; it
+does not bypass local argument validation or independent terminal-state
+verification.
 
 ## Retry and budget semantics
 
-Transport retries are explicit events and usage facts. They are separate from model retries, re-prompts, tool loops, and agent self-correction.
+Transport retries are explicit events and usage facts. Every external request
+receives its own trace record, request ID where available, response receipt, and
+reported usage. A retry response with missing metering makes the affected totals
+unknown; it is not discarded and it is not inferred to have cost zero.
+Transport retries remain separate from model retries, re-prompts, tool loops,
+and agent self-correction. Provider-supplied `Retry-After` delays are required
+to be finite and are capped by `max_retry_after_seconds`.
 
 The adapter enforces the tighter of its own and the `RunStack` model-call and tool-call limits. It also applies the declared wall-time budget while requests and command tools are running, and stops before executing tools after a reported token budget has already been exceeded.
 
-A retry, timeout, rate limit, malformed response, missing credential, cancellation, or exhausted resource envelope receives a typed outcome and remains in the evidence. Failed attempts are not discarded from later acceptance or cost analysis.
+A retry, timeout, rate limit, malformed response, missing credential,
+cancellation, or exhausted resource envelope receives a typed outcome and
+remains in the evidence. Responses API states such as `incomplete` and Chat
+Completions finish reasons such as `length` do not pass as completed work. A
+configured limit that cannot be checked because usage is unavailable produces
+`not_proven`, not an accepted result. Failed attempts are not discarded from
+later acceptance or cost analysis.
+
+For stateless Responses tool loops (`store: false`), set
+`responses_include: [reasoning.encrypted_content]` when the selected model emits
+reasoning items. The adapter replays self-contained encrypted reasoning and
+drops non-self-contained reasoning references that the provider cannot resolve
+without stored state. Keep the include list configurable because compatible
+endpoints may not implement that field.
 
 ## Usage is unknown until proven
 
@@ -153,13 +200,24 @@ video_units
 actual candidate cost
 ```
 
-`null` means the provider or product surface did not expose enough evidence. It never means zero. A list-equivalent cost is therefore also unknown when a pricing policy assigns a nonzero rate to a missing usage dimension.
+`null` means the provider or product surface did not expose enough evidence.
+It never means zero. Present-but-malformed usage is a protocol failure rather
+than being converted to `null`. Reported input and output totals remain
+inclusive totals; cached input and reasoning are retained as subsets so a
+pricing policy can partition rather than double-price them. A list-equivalent
+cost is unknown when the required total or subset evidence is unavailable.
 
 Locally observable counts such as model calls, tool calls, transport retries, and wall time remain concrete.
 
 ## Offline and live tests
 
-The default suite is credential-free. It covers both API styles, function-tool loops, request redaction, usage parsing, explicit retries, rate limits, malformed responses, missing usage, timeouts, cancellation, command-tool failures, and resource budgets. A local HTTP test exercises the real standard-library transport without contacting an external provider.
+The default suite is credential-free. It covers both API styles, function-tool
+loops, stateless reasoning replay, request and response redaction, usage parsing,
+retry receipts, rate limits, incomplete generations, malformed usage, missing
+usage, partial-output timeouts, cancellation, local schema enforcement, disabled
+tools, asset-digest drift, reserved-path collisions, and resource budgets. Local
+HTTP tests exercise the real standard-library transport, including redirect
+refusal, without contacting an external provider.
 
 A credentialed run is an external evidence operation. Preserve its exact `RunStack`, adapter configuration, endpoint identity, provider timestamps and identifiers, raw usage, pricing policy, output artifacts, and redaction receipt before using it in a study.
 

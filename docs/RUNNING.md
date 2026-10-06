@@ -159,9 +159,13 @@ artifacts. Additional command tools run without a shell and receive JSON on stan
 input.
 
 The adapter enforces model-call, tool-call, token, and wall-time limits where the evidence
-permits enforcement. Transport retries are explicit. Missing provider usage remains
-`null`, and list-equivalent pricing remains unknown when a nonzero-priced dimension is
-unavailable.
+permits enforcement. Transport retries are explicit and retain their own request, response,
+identifier, and usage receipts. Missing provider usage remains `null`; an otherwise
+successful attempt becomes `not_proven` when a configured token limit cannot be checked.
+List-equivalent pricing also remains unknown when a nonzero-priced total or subset is
+unavailable. Reported input and output totals are inclusive; cached input and reasoning
+remain separately recorded subsets so a pricing policy can partition rather than
+double-price them.
 
 See [Provider and agent-harness adapters](PROVIDER_ADAPTERS.md) for the complete contract,
 security boundary, examples, and claim limit.

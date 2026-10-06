@@ -47,7 +47,22 @@ If a policy assigns a nonzero rate to an unavailable usage dimension, the projec
 is unknown. Study reports therefore retain both mean cost over priced attempts and the
 number of attempts with sufficient pricing evidence.
 
-Provider-specific accounting varies. A pricing policy must state how reasoning, cached input, images, video, and per-call charges are treated rather than assuming all tokens share one price.
+Provider-specific accounting varies. In the VideoBench wire contract, reported
+`input_tokens` and `output_tokens` are inclusive totals. Cached input is a subset
+of input; reasoning is a subset of output. A pricing projection therefore uses:
+
+```text
+(input total - cached input) × ordinary input rate
++ cached input × cached rate
++ (output total - reasoning) × ordinary output rate
++ reasoning × reasoning rate
+```
+
+This preserves the provider receipt while preventing subset tokens from being
+charged twice. When the ordinary and subset rates differ, a missing subset makes
+the projected total unknown. A pricing policy must also state how cache writes,
+images, video, and per-call charges are treated rather than assuming all usage
+shares one price.
 
 ## Three economic views
 
@@ -115,7 +130,10 @@ Avoid `quality / dollars` as the headline. Ratios behave badly near zero and can
 
 Infrastructure transport retries and semantic retries are different.
 
-- Transport retries may be policy-governed, but remain counted.
+- Every transport attempt remains counted and, when available, contributes its
+  own reported usage.
+- A retry without a usage receipt makes the affected aggregate unknown; later
+  successful usage does not erase that gap.
 - Model retries, re-prompts, self-corrections, and compactions are part of the candidate burden.
 - Failed attempts remain in acceptance probability and cost-to-accepted-work analysis.
 - Silent retries are invalid.

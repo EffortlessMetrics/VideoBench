@@ -174,6 +174,20 @@ def _apply_resource_envelope(
         )
         if outcome == OutcomeStatus.PASS:
             outcome = OutcomeStatus.BUDGET_EXHAUSTED
+    if missing:
+        events.append(
+            RunEvent(
+                sequence=(events[-1].sequence + 1 if events else 0),
+                event_type="resource_budget_unverified",
+                message=(
+                    "A configured resource limit could not be checked because the "
+                    "candidate surface did not report the required usage evidence."
+                ),
+                data={"missing": missing},
+            )
+        )
+        if outcome == OutcomeStatus.PASS:
+            outcome = OutcomeStatus.NOT_PROVEN
     return outcome, missing
 
 

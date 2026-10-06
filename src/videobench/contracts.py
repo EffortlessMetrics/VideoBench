@@ -332,7 +332,9 @@ class UsageRecord(StrictModel):
 
     Provider-metered dimensions are optional on purpose. ``None`` means the surface did
     not expose enough evidence to establish the value; it must never be interpreted as
-    zero. Locally observable counts and durations retain concrete zero defaults.
+    zero. ``input_tokens`` and ``output_tokens`` retain provider-reported inclusive totals;
+    cached-input and reasoning counts are subsets used to partition those totals under a
+    pricing policy. Locally observable counts and durations retain concrete zero defaults.
     """
 
     input_tokens: int | None = Field(default=None, ge=0)

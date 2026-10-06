@@ -130,9 +130,16 @@
       "type": "boolean"
     },
     "api_key_env": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
       "default": "OPENAI_API_KEY",
-      "title": "Api Key Env",
-      "type": "string"
+      "title": "Api Key Env"
     },
     "api_style": {
       "$ref": "#/$defs/OpenAIAPIStyle",
@@ -219,6 +226,12 @@
       "default": null,
       "title": "Max Output Tokens"
     },
+    "max_retry_after_seconds": {
+      "default": 60.0,
+      "exclusiveMinimum": 0.0,
+      "title": "Max Retry After Seconds",
+      "type": "number"
+    },
     "max_tool_calls": {
       "default": 64,
       "minimum": 0,
@@ -267,6 +280,13 @@
       "default": true,
       "title": "Require Api Key",
       "type": "boolean"
+    },
+    "responses_include": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Responses Include",
+      "type": "array"
     },
     "retry_http_statuses": {
       "items": {

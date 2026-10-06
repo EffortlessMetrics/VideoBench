@@ -11,8 +11,10 @@ from __future__ import annotations
 import base64
 import binascii
 import hashlib
+import http.client
 import ipaddress
 import json
+import math
 import mimetypes
 import os
 import re
@@ -25,12 +27,16 @@ import urllib.request
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from enum import StrEnum
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, Protocol
 
+from jsonschema import SchemaError as JSONSchemaError
+from jsonschema import ValidationError as JSONSchemaValidationError
+from jsonschema.validators import validator_for
 from pydantic import Field, model_validator
 
 from videobench.canonical import (
+    path_sha256,
     resolve_under_root,
     sha256_hex,
     validate_relative_evidence_path,
@@ -115,6 +121,18 @@ def _is_loopback_hostname(hostname: str) -> bool:
         return False
 
 
+def _paths_collide(first: str, second: str) -> bool:
+    """Return whether either relative path is equal to or contains the other."""
+
+    first_path = PurePosixPath(first)
+    second_path = PurePosixPath(second)
+    return (
+        first_path == second_path
+        or first_path in second_path.parents
+        or second_path in first_path.parents
+    )
+
+
 class InlineImageSpec(StrictModel):
     asset_id: str
     detail: str = "auto"
@@ -154,6 +172,10 @@ class CommandToolSpec(StrictModel):
             raise ValueError("command tool parameters.properties must be an object")
         if self.parameters.get("additionalProperties") is not False:
             raise ValueError("command tool schemas must set additionalProperties to false")
+        try:
+            validator_for(self.parameters).check_schema(self.parameters)
+        except JSONSchemaError as error:
+            raise ValueError(f"command tool parameters are not valid JSON Schema: {error}") from error
         if self.strict:
             _validate_strict_function_schema(self.parameters)
         return self
@@ -163,7 +185,7 @@ class OpenAICompatibleConfig(StrictModel):
     adapter_id: str
     endpoint: str
     api_style: OpenAIAPIStyle = OpenAIAPIStyle.RESPONSES
-    api_key_env: str = "OPENAI_API_KEY"
+    api_key_env: str | None = "OPENAI_API_KEY"
     require_api_key: bool = True
     allow_insecure_http: bool = False
     header_environment: dict[str, str] = Field(default_factory=dict)
@@ -180,11 +202,13 @@ class OpenAICompatibleConfig(StrictModel):
     request_timeout_seconds: float = Field(default=120.0, gt=0.0)
     transport_max_attempts: int = Field(default=3, ge=1)
     transport_backoff_seconds: list[float] = Field(default_factory=lambda: [0.5, 1.0])
+    max_retry_after_seconds: float = Field(default=60.0, gt=0.0)
     retry_http_statuses: list[int] = Field(
         default_factory=lambda: [408, 409, 429, 500, 502, 503, 504]
     )
     store: bool | None = False
     reasoning_effort: str | None = None
+    responses_include: list[str] = Field(default_factory=list)
     max_output_tokens: int | None = Field(default=None, ge=1)
     chat_max_tokens_field: ChatMaxTokensField = ChatMaxTokensField.MAX_COMPLETION_TOKENS
     temperature: float | None = Field(default=None, ge=0.0, le=2.0)
@@ -208,19 +232,23 @@ class OpenAICompatibleConfig(StrictModel):
             raise ValueError("endpoint must not contain credentials")
         if parsed.fragment:
             raise ValueError("endpoint must not contain a URL fragment")
-        if (
-            parsed.scheme == "http"
-            and not self.allow_insecure_http
-            and not _is_loopback_hostname(parsed.hostname)
+        if parsed.scheme == "http" and not self.allow_insecure_http and not _is_loopback_hostname(
+            parsed.hostname
         ):
             raise ValueError(
                 "plain HTTP endpoints are limited to loopback unless "
                 "allow_insecure_http is explicitly enabled"
             )
-        if not self.api_key_env:
-            raise ValueError("api_key_env must not be empty")
+        if self.require_api_key and self.api_key_env is None:
+            raise ValueError("require_api_key requires api_key_env")
+        if self.api_key_env == "":
+            raise ValueError("api_key_env must be null or a non-empty environment variable name")
+        if parsed.scheme == "http" and (self.api_key_env is not None or self.header_environment):
+            raise ValueError("credentialed provider requests require HTTPS")
         validate_relative_evidence_path(self.final_text_path)
         validate_relative_evidence_path(self.trace_path)
+        if _paths_collide(self.final_text_path, self.trace_path):
+            raise ValueError("final_text_path and trace_path must be distinct non-overlapping paths")
         names = [tool.name for tool in self.command_tools]
         reserved = {
             "videobench_write_text_artifact",
@@ -238,6 +266,10 @@ class OpenAICompatibleConfig(StrictModel):
             raise ValueError("inline image asset IDs must be unique")
         if any(delay < 0 for delay in self.transport_backoff_seconds):
             raise ValueError("transport backoff values must be nonnegative")
+        if len(self.responses_include) != len(set(self.responses_include)):
+            raise ValueError("responses_include entries must be unique")
+        if self.api_style != OpenAIAPIStyle.RESPONSES and self.responses_include:
+            raise ValueError("responses_include is available only for Responses-style adapters")
         sensitive_headers = {"authorization", "api-key", "x-api-key"}
         literal_sensitive = sensitive_headers.intersection(
             name.lower() for name in self.extra_headers
@@ -272,6 +304,17 @@ class HTTPTransport(Protocol):
     ) -> TransportResponse: ...
 
 
+class _RejectRedirects(urllib.request.HTTPRedirectHandler):
+    def redirect_request(  # type: ignore[no-untyped-def]
+        self, request, file_pointer, code, message, headers, new_url
+    ):
+        del request, file_pointer, code, message, headers, new_url
+        return None
+
+
+_OPENER = urllib.request.build_opener(_RejectRedirects())
+
+
 class UrllibTransport:
     def post(
         self,
@@ -283,19 +326,30 @@ class UrllibTransport:
     ) -> TransportResponse:
         request = urllib.request.Request(url, data=body, headers=dict(headers), method="POST")
         try:
-            with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
+            with _OPENER.open(request, timeout=timeout_seconds) as response:
                 return TransportResponse(
                     status=int(response.status),
                     headers={key.lower(): value for key, value in response.headers.items()},
                     body=response.read(),
                 )
         except urllib.error.HTTPError as error:
+            try:
+                body = error.read()
+            except http.client.HTTPException as read_error:
+                raise ProviderTransportError(
+                    f"{type(read_error).__name__}: {read_error}"
+                ) from read_error
             return TransportResponse(
                 status=int(error.code),
                 headers={key.lower(): value for key, value in error.headers.items()},
-                body=error.read(),
+                body=body,
             )
-        except (TimeoutError, urllib.error.URLError, OSError) as error:
+        except (
+            TimeoutError,
+            urllib.error.URLError,
+            OSError,
+            http.client.HTTPException,
+        ) as error:
             raise ProviderTransportError(f"{type(error).__name__}: {error}") from error
 
 
@@ -329,6 +383,7 @@ class _UsageAccumulator:
     cache_write_tokens: int = 0
     reasoning_tokens: int = 0
     output_tokens: int = 0
+    observed: bool = False
     input_known: bool = True
     cached_known: bool = True
     cache_write_known: bool = True
@@ -336,6 +391,7 @@ class _UsageAccumulator:
     output_known: bool = True
 
     def add(self, values: Mapping[str, int | None]) -> None:
+        self.observed = True
         input_tokens = values.get("input_tokens")
         if input_tokens is None:
             self.input_known = False
@@ -366,7 +422,25 @@ class _UsageAccumulator:
         else:
             self.output_tokens += output_tokens
 
+    def mark_unknown(self) -> None:
+        """Record an external request whose metered consumption is not established."""
+
+        self.observed = True
+        self.input_known = False
+        self.cached_known = False
+        self.cache_write_known = False
+        self.reasoning_known = False
+        self.output_known = False
+
     def finish(self) -> dict[str, int | None]:
+        if not self.observed:
+            return {
+                "input_tokens": None,
+                "cached_input_tokens": None,
+                "cache_write_tokens": None,
+                "reasoning_tokens": None,
+                "output_tokens": None,
+            }
         return {
             "input_tokens": self.input_tokens if self.input_known else None,
             "cached_input_tokens": (self.cached_input_tokens if self.cached_known else None),
@@ -393,6 +467,79 @@ def _safe_output_path(output_dir: Path, relative: str) -> Path:
     return path
 
 
+def _reserved_output_paths(config: OpenAICompatibleConfig) -> tuple[str, str]:
+    return (config.final_text_path, config.trace_path)
+
+
+def _candidate_output_path(
+    output_dir: Path,
+    relative: str,
+    config: OpenAICompatibleConfig,
+) -> Path:
+    for reserved in _reserved_output_paths(config):
+        if _paths_collide(relative, reserved):
+            raise ValueError(f"candidate output path collides with adapter evidence: {relative}")
+    return _safe_output_path(output_dir, relative)
+
+
+def _validate_output_contract(execution_pack: ExecutionPack, config: OpenAICompatibleConfig) -> None:
+    collisions = sorted(
+        deliverable.path
+        for deliverable in execution_pack.output_contract.deliverables
+        if any(
+            _paths_collide(deliverable.path, reserved)
+            for reserved in _reserved_output_paths(config)
+        )
+    )
+    if collisions:
+        raise ValueError(
+            "adapter evidence paths collide with declared deliverables: " + ", ".join(collisions)
+        )
+
+
+def _quarantine_reserved_collisions(
+    output_dir: Path,
+    config: OpenAICompatibleConfig,
+) -> list[dict[str, str]]:
+    """Preserve candidate bytes that appeared in adapter-owned paths."""
+
+    collision_nodes: dict[Path, str] = {}
+    for reserved in _reserved_output_paths(config):
+        relative = PurePosixPath(reserved)
+        current = output_dir
+        for index, part in enumerate(relative.parts):
+            current = current / part
+            if not current.exists() and not current.is_symlink():
+                break
+            is_final_component = index == len(relative.parts) - 1
+            if is_final_component or not current.is_dir() or current.is_symlink():
+                collision_nodes.setdefault(current, reserved)
+                break
+
+    if not collision_nodes:
+        return []
+
+    quarantine_root = output_dir / ".videobench-collisions"
+    suffix = 0
+    while quarantine_root.exists() or quarantine_root.is_symlink():
+        suffix += 1
+        quarantine_root = output_dir / f".videobench-collisions-{suffix}"
+    quarantine_root.mkdir()
+
+    records: list[dict[str, str]] = []
+    for index, (source, reserved) in enumerate(sorted(collision_nodes.items(), key=str)):
+        destination = quarantine_root / f"{index:02d}-{source.name or 'root'}"
+        shutil.move(str(source), destination)
+        records.append(
+            {
+                "reserved_path": reserved,
+                "collision_path": source.relative_to(output_dir).as_posix(),
+                "preserved_as": destination.relative_to(output_dir).as_posix(),
+            }
+        )
+    return records
+
+
 def _asset_by_id(execution_pack: ExecutionPack, asset_id: str) -> AssetSpec:
     for asset in execution_pack.assets:
         if asset.asset_id == asset_id:
@@ -405,7 +552,21 @@ def _asset_path(execution_pack: ExecutionPack, asset_root: Path, asset_id: str) 
     path = resolve_under_root(asset_root, asset.path)
     if not path.is_file():
         raise ValueError(f"ExecutionPack asset is not a regular file: {asset_id}")
+    if asset.sha256 is not None:
+        actual = path_sha256(path)
+        if actual != asset.sha256:
+            raise ValueError(
+                f"ExecutionPack asset digest mismatch for {asset_id}: "
+                f"expected {asset.sha256}, got {actual}"
+            )
     return path
+
+
+def _validate_execution_assets(execution_pack: ExecutionPack, asset_root: Path) -> None:
+    """Bind every candidate-visible asset to the frozen ExecutionPack before a request."""
+
+    for asset in execution_pack.assets:
+        _asset_path(execution_pack, asset_root, asset.asset_id)
 
 
 def _execution_prompt(execution_pack: ExecutionPack, config: OpenAICompatibleConfig) -> str:
@@ -631,6 +792,8 @@ def _request_body(
             body["tools"] = tools
         if config.reasoning_effort is not None:
             body["reasoning"] = {"effort": config.reasoning_effort}
+        if config.responses_include:
+            body["include"] = list(config.responses_include)
         if config.max_output_tokens is not None:
             body["max_output_tokens"] = config.max_output_tokens
         if config.temperature is not None:
@@ -657,7 +820,7 @@ def _request_body(
 
 def _headers(config: OpenAICompatibleConfig) -> dict[str, str]:
     headers = {"content-type": "application/json", **config.extra_headers}
-    api_key = os.environ.get(config.api_key_env)
+    api_key = os.environ.get(config.api_key_env) if config.api_key_env is not None else None
     if api_key:
         headers["authorization"] = f"Bearer {api_key}"
     elif config.require_api_key:
@@ -696,6 +859,46 @@ def _redact_request(value: Any) -> Any:
     return value
 
 
+def _secret_values(
+    headers: Mapping[str, str],
+    *,
+    secret_header_names: set[str] | None = None,
+    endpoint: str | None = None,
+) -> tuple[str, ...]:
+    names = {"authorization", "api-key", "x-api-key"}
+    names.update(name.lower() for name in (secret_header_names or set()))
+    values: list[str] = []
+    for name, value in headers.items():
+        if name.lower() in names:
+            values.append(value)
+            if value.lower().startswith("bearer "):
+                values.append(value[7:])
+    if endpoint is not None:
+        for _, value in urllib.parse.parse_qsl(
+            urllib.parse.urlsplit(endpoint).query,
+            keep_blank_values=False,
+        ):
+            values.append(value)
+    return tuple(sorted({value for value in values if value}, key=len, reverse=True))
+
+
+def _redact_secrets(value: str, secrets: tuple[str, ...]) -> str:
+    redacted = value
+    for secret in secrets:
+        redacted = redacted.replace(secret, "<redacted-secret>")
+    return redacted
+
+
+def _redact_response(value: Any, secrets: tuple[str, ...]) -> Any:
+    if isinstance(value, str):
+        return _redact_secrets(value, secrets)
+    if isinstance(value, list):
+        return [_redact_response(item, secrets) for item in value]
+    if isinstance(value, dict):
+        return {key: _redact_response(item, secrets) for key, item in value.items()}
+    return value
+
+
 def _request_trace(body: dict[str, Any], mode: RequestTraceMode) -> dict[str, Any]:
     record: dict[str, Any] = {"request_sha256": sha256_hex(body)}
     if mode == RequestTraceMode.REDACTED:
@@ -720,8 +923,9 @@ def _attach_response_body_evidence(
     response: TransportResponse,
     *,
     preserve_raw: bool,
+    secrets: tuple[str, ...] = (),
 ) -> str:
-    decoded = response.body.decode("utf-8", errors="replace")
+    decoded = _redact_secrets(response.body.decode("utf-8", errors="replace"), secrets)
     if preserve_raw:
         record["response_text"] = decoded
     else:
@@ -743,32 +947,101 @@ def _usage_values(payload: Mapping[str, Any], style: OpenAIAPIStyle) -> dict[str
     if style == OpenAIAPIStyle.RESPONSES:
         input_details = usage.get("input_tokens_details")
         output_details = usage.get("output_tokens_details")
-        return {
-            "input_tokens": _optional_int(usage.get("input_tokens")),
-            "cached_input_tokens": _nested_optional_int(input_details, "cached_tokens"),
-            "cache_write_tokens": _nested_optional_int(input_details, "cache_write_tokens"),
-            "reasoning_tokens": _nested_optional_int(output_details, "reasoning_tokens"),
-            "output_tokens": _optional_int(usage.get("output_tokens")),
+        values = {
+            "input_tokens": _optional_int(usage, "input_tokens"),
+            "cached_input_tokens": _nested_optional_int(
+                input_details, "cached_tokens", "input_tokens_details"
+            ),
+            "cache_write_tokens": _nested_optional_int(
+                input_details, "cache_write_tokens", "input_tokens_details"
+            ),
+            "reasoning_tokens": _nested_optional_int(
+                output_details, "reasoning_tokens", "output_tokens_details"
+            ),
+            "output_tokens": _optional_int(usage, "output_tokens"),
         }
+        _validate_usage_subsets(values)
+        return values
     prompt_details = usage.get("prompt_tokens_details")
     completion_details = usage.get("completion_tokens_details")
-    return {
-        "input_tokens": _optional_int(usage.get("prompt_tokens")),
-        "cached_input_tokens": _nested_optional_int(prompt_details, "cached_tokens"),
-        "cache_write_tokens": _nested_optional_int(prompt_details, "cache_write_tokens"),
-        "reasoning_tokens": _nested_optional_int(completion_details, "reasoning_tokens"),
-        "output_tokens": _optional_int(usage.get("completion_tokens")),
+    values = {
+        "input_tokens": _optional_int(usage, "prompt_tokens"),
+        "cached_input_tokens": _nested_optional_int(
+            prompt_details, "cached_tokens", "prompt_tokens_details"
+        ),
+        "cache_write_tokens": _nested_optional_int(
+            prompt_details, "cache_write_tokens", "prompt_tokens_details"
+        ),
+        "reasoning_tokens": _nested_optional_int(
+            completion_details, "reasoning_tokens", "completion_tokens_details"
+        ),
+        "output_tokens": _optional_int(usage, "completion_tokens"),
     }
+    _validate_usage_subsets(values)
+    return values
 
 
-def _optional_int(value: Any) -> int | None:
-    return value if isinstance(value, int) and value >= 0 else None
-
-
-def _nested_optional_int(value: Any, key: str) -> int | None:
-    if not isinstance(value, Mapping):
+def _optional_int(value: Mapping[str, Any], key: str) -> int | None:
+    if key not in value or value[key] is None:
         return None
-    return _optional_int(value.get(key))
+    candidate = value[key]
+    if isinstance(candidate, bool) or not isinstance(candidate, int) or candidate < 0:
+        raise ProviderProtocolError(
+            f"Provider usage value {key} is malformed: {candidate!r}"
+        )
+    return candidate
+
+
+def _nested_optional_int(value: Any, key: str, container_name: str) -> int | None:
+    if value is None:
+        return None
+    if not isinstance(value, Mapping):
+        raise ProviderProtocolError(
+            f"Provider usage value {container_name} must be an object or null"
+        )
+    return _optional_int(value, key)
+
+
+def _validate_usage_subsets(values: Mapping[str, int | None]) -> None:
+    for total_name, subset_name in (
+        ("input_tokens", "cached_input_tokens"),
+        ("output_tokens", "reasoning_tokens"),
+    ):
+        total = values[total_name]
+        subset = values[subset_name]
+        if total is not None and subset is not None and subset > total:
+            raise ProviderProtocolError(
+                f"Provider usage subset {subset_name} exceeds {total_name}"
+            )
+
+
+def _terminal_provider_outcome(
+    payload: Mapping[str, Any],
+    style: OpenAIAPIStyle,
+) -> tuple[OutcomeStatus, str, str] | None:
+    if style == OpenAIAPIStyle.RESPONSES:
+        status = payload.get("status")
+        if status is None or status == "completed":
+            return None
+        if not isinstance(status, str):
+            raise ProviderProtocolError("Responses status must be a string when present")
+        detail = payload.get("incomplete_details") or payload.get("error") or status
+        outcome = OutcomeStatus.NOT_PROVEN if status in {"incomplete", "in_progress"} else OutcomeStatus.TOOL_FAILURE
+        return outcome, f"provider_response_{status}", f"Responses API status was {status}: {detail}"
+
+    choices = payload.get("choices")
+    if not isinstance(choices, list) or not choices or not isinstance(choices[0], Mapping):
+        return None
+    finish_reason = choices[0].get("finish_reason")
+    if finish_reason is None or finish_reason in {"stop", "tool_calls", "function_call"}:
+        return None
+    if not isinstance(finish_reason, str):
+        raise ProviderProtocolError("Chat Completions finish_reason must be a string or null")
+    return (
+        OutcomeStatus.NOT_PROVEN,
+        "provider_response_incomplete",
+        f"Chat Completions finish_reason was {finish_reason}",
+    )
 
 
 def _parse_responses_output(payload: Mapping[str, Any]) -> tuple[str, list[dict[str, str]]]:
@@ -863,6 +1136,24 @@ def _baseline_command_environment() -> dict[str, str]:
     return {name: value for name, value in os.environ.items() if name in permitted}
 
 
+def _text_from_timeout(value: str | bytes | None) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return value
+
+
+def _validate_command_arguments(tool: CommandToolSpec, arguments: dict[str, Any]) -> str | None:
+    try:
+        validator = validator_for(tool.parameters)(tool.parameters)
+        validator.validate(arguments)
+    except JSONSchemaValidationError as error:
+        location = ".".join(str(item) for item in error.absolute_path) or "$"
+        return f"{location}: {error.message}"
+    return None
+
+
 def _execute_tool(
     *,
     name: str,
@@ -886,17 +1177,23 @@ def _execute_tool(
 
     try:
         if name == "videobench_write_text_artifact":
-            path = _safe_output_path(output_dir, str(arguments["path"]))
+            if not config.enable_artifact_tools:
+                return {"ok": False, "error": "tool_disabled", "tool": name}
+            path = _candidate_output_path(output_dir, str(arguments["path"]), config)
             content = arguments["content"]
             if not isinstance(content, str):
                 raise ValueError("content must be a string")
             path.write_text(content, encoding="utf-8")
             return {"ok": True, "path": path.relative_to(output_dir).as_posix()}
         if name == "videobench_write_json_artifact":
-            path = _safe_output_path(output_dir, str(arguments["path"]))
+            if not config.enable_artifact_tools:
+                return {"ok": False, "error": "tool_disabled", "tool": name}
+            path = _candidate_output_path(output_dir, str(arguments["path"]), config)
             write_json(path, arguments["value"])
             return {"ok": True, "path": path.relative_to(output_dir).as_posix()}
         if name == "videobench_read_asset_text":
+            if not config.enable_asset_reader:
+                return {"ok": False, "error": "tool_disabled", "tool": name}
             path = _asset_path(execution_pack, asset_root, str(arguments["asset_id"]))
             requested_max_chars = arguments.get("max_chars")
             max_chars = (
@@ -914,8 +1211,10 @@ def _execute_tool(
                 "total_chars": len(text),
             }
         if name == "videobench_copy_asset":
+            if not config.enable_artifact_tools:
+                return {"ok": False, "error": "tool_disabled", "tool": name}
             source = _asset_path(execution_pack, asset_root, str(arguments["asset_id"]))
-            destination = _safe_output_path(output_dir, str(arguments["path"]))
+            destination = _candidate_output_path(output_dir, str(arguments["path"]), config)
             shutil.copy2(source, destination)
             return {"ok": True, "path": destination.relative_to(output_dir).as_posix()}
     except (KeyError, TypeError, ValueError, OSError, UnicodeDecodeError) as error:
@@ -924,6 +1223,13 @@ def _execute_tool(
     command_tool = next((item for item in config.command_tools if item.name == name), None)
     if command_tool is None:
         return {"ok": False, "error": "unknown_tool", "tool": name}
+    schema_error = _validate_command_arguments(command_tool, arguments)
+    if schema_error is not None:
+        return {
+            "ok": False,
+            "error": "tool_arguments_schema_violation",
+            "detail": schema_error,
+        }
 
     if command_tool.working_directory is None:
         cwd = workspace
@@ -980,8 +1286,8 @@ def _execute_tool(
             "ok": False,
             "error": "tool_timeout",
             "timeout_seconds": timeout_seconds,
-            "stdout": error.stdout or "",
-            "stderr": error.stderr or "",
+            "stdout": _text_from_timeout(error.stdout),
+            "stderr": _text_from_timeout(error.stderr),
             "duration_seconds": time.perf_counter() - started,
         }
     except OSError as error:
@@ -999,8 +1305,10 @@ def _retry_delay(
     retry_after = headers.get("retry-after")
     if retry_after is not None:
         try:
-            return max(0.0, float(retry_after))
-        except ValueError:
+            parsed = float(retry_after)
+            if math.isfinite(parsed):
+                return min(max(0.0, parsed), config.max_retry_after_seconds)
+        except (ValueError, OverflowError):
             pass
     if not config.transport_backoff_seconds:
         return 0.0
@@ -1052,9 +1360,11 @@ def execute_openai_compatible(
     This function never reads verifier or judge artifacts.
     """
 
+    _validate_output_contract(execution_pack, config)
     transport = transport or UrllibTransport()
     cancellation_check = cancellation_check or (lambda: False)
     workspace.mkdir(parents=True, exist_ok=True)
+    trace_endpoint = urllib.parse.urlsplit(config.endpoint)._replace(query="").geturl()
     events: list[RunEvent] = []
     _event(
         events,
@@ -1062,13 +1372,13 @@ def execute_openai_compatible(
         "OpenAI-compatible provider run started.",
         adapter_id=config.adapter_id,
         api_style=config.api_style.value,
-        endpoint=config.endpoint,
+        endpoint=trace_endpoint,
     )
     start = time.perf_counter()
     trace: dict[str, Any] = {
         "adapter_id": config.adapter_id,
         "api_style": config.api_style.value,
-        "endpoint": config.endpoint,
+        "endpoint": trace_endpoint,
         "model": run_stack.system.model,
         "request_trace_mode": config.request_trace_mode.value,
         "requests": [],
@@ -1086,6 +1396,7 @@ def execute_openai_compatible(
     known_missing: list[str] = []
 
     try:
+        _validate_execution_assets(execution_pack, asset_root)
         conversation = _initial_conversation(
             execution_pack=execution_pack,
             asset_root=asset_root,
@@ -1103,9 +1414,15 @@ def execute_openai_compatible(
         )
 
     provider_headers: dict[str, str] = {}
+    provider_secrets: tuple[str, ...] = ()
     if outcome == OutcomeStatus.PASS:
         try:
             provider_headers = _headers(config)
+            provider_secrets = _secret_values(
+                provider_headers,
+                secret_header_names=set(config.header_environment),
+                endpoint=config.endpoint,
+            )
         except ProviderEnvironmentError as error:
             outcome = OutcomeStatus.ENVIRONMENT_BLOCKED
             stderr = str(error)
@@ -1128,6 +1445,63 @@ def execute_openai_compatible(
             effective_tool_limit,
             run_stack.resource_envelope.max_tool_calls,
         )
+
+    def request_record(
+        response: TransportResponse | None,
+        request_body: dict[str, Any],
+        *,
+        transport_attempt: int,
+        transport_error: str | None = None,
+    ) -> dict[str, Any]:
+        request_id = response.headers.get("x-request-id") if response is not None else None
+        if request_id:
+            http_request_ids.append(request_id)
+        record: dict[str, Any] = {
+            "logical_call": logical_calls,
+            "transport_attempt": transport_attempt,
+            "status": response.status if response is not None else None,
+            "request_id": request_id,
+            **_request_trace(request_body, config.request_trace_mode),
+        }
+        if transport_error is not None:
+            record["transport_error"] = transport_error
+        return record
+
+    def capture_payload_receipt(
+        response: TransportResponse,
+        record: dict[str, Any],
+        *,
+        require_protocol: bool,
+    ) -> tuple[dict[str, Any] | None, str | None]:
+        """Capture one response and its usage without losing retry evidence."""
+
+        try:
+            payload = _decode_json(response)
+            usage_accumulator.add(_usage_values(payload, config.api_style))
+        except ProviderProtocolError as error:
+            usage_accumulator.mark_unknown()
+            record["receipt_error"] = str(error)
+            _attach_response_body_evidence(
+                record,
+                response,
+                preserve_raw=config.preserve_raw_responses,
+                secrets=provider_secrets,
+            )
+            if require_protocol:
+                raise
+            return None, str(error)
+
+        provider_response_id = payload.get("id")
+        if isinstance(provider_response_id, str):
+            provider_response_ids.append(provider_response_id)
+        if config.preserve_raw_responses:
+            record["response"] = _redact_response(payload, provider_secrets)
+        else:
+            record["response_id"] = provider_response_id
+            record["usage"] = _redact_response(payload.get("usage"), provider_secrets)
+            record["response_sha256"] = hashlib.sha256(response.body).hexdigest()
+            record["response_bytes"] = len(response.body)
+        return payload, None
 
     try:
         while outcome == OutcomeStatus.PASS:
@@ -1170,9 +1544,11 @@ def execute_openai_compatible(
                 logical_call=logical_calls,
             )
             response: TransportResponse | None = None
+            response_record: dict[str, Any] | None = None
             last_transport_error: str | None = None
 
             for transport_attempt in range(config.transport_max_attempts):
+                attempt_number = transport_attempt + 1
                 remaining_wall = _remaining_wall_seconds(start, run_stack)
                 if remaining_wall is not None and remaining_wall <= 0:
                     outcome = OutcomeStatus.TIMED_OUT
@@ -1194,10 +1570,21 @@ def execute_openai_compatible(
                         body=json.dumps(body, ensure_ascii=False).encode("utf-8"),
                         timeout_seconds=request_timeout,
                     )
+                    response_record = request_record(
+                        response,
+                        body,
+                        transport_attempt=attempt_number,
+                    )
                     if (
                         response.status in config.retry_http_statuses
-                        and transport_attempt + 1 < config.transport_max_attempts
+                        and attempt_number < config.transport_max_attempts
                     ):
+                        capture_payload_receipt(
+                            response,
+                            response_record,
+                            require_protocol=False,
+                        )
+                        trace["requests"].append(response_record)
                         delay = _retry_delay(config, transport_attempt, response.headers)
                         remaining_wall = _remaining_wall_seconds(start, run_stack)
                         if remaining_wall is not None:
@@ -1209,16 +1596,30 @@ def execute_openai_compatible(
                             "Retrying provider request after retryable HTTP status.",
                             logical_call=logical_calls,
                             status=response.status,
+                            request_id=response_record.get("request_id"),
                             retry_number=transport_retries,
                             delay_seconds=delay,
                         )
                         sleep(delay)
                         response = None
+                        response_record = None
                         continue
                     break
                 except ProviderTransportError as error:
-                    last_transport_error = str(error)
-                    if transport_attempt + 1 >= config.transport_max_attempts:
+                    usage_accumulator.mark_unknown()
+                    last_transport_error = _redact_secrets(str(error), provider_secrets).replace(
+                        config.endpoint,
+                        trace_endpoint,
+                    )
+                    trace["requests"].append(
+                        request_record(
+                            None,
+                            body,
+                            transport_attempt=attempt_number,
+                            transport_error=last_transport_error,
+                        )
+                    )
+                    if attempt_number >= config.transport_max_attempts:
                         break
                     delay = _retry_delay(config, transport_attempt, {})
                     remaining_wall = _remaining_wall_seconds(start, run_stack)
@@ -1238,7 +1639,7 @@ def execute_openai_compatible(
 
             if outcome != OutcomeStatus.PASS:
                 break
-            if response is None:
+            if response is None or response_record is None:
                 timed_out = bool(
                     last_transport_error
                     and any(
@@ -1246,7 +1647,7 @@ def execute_openai_compatible(
                     )
                 )
                 outcome = OutcomeStatus.TIMED_OUT if timed_out else OutcomeStatus.TOOL_FAILURE
-                stderr = last_transport_error or ("Provider transport failed without a response.")
+                stderr = last_transport_error or "Provider transport failed without a response."
                 _event(
                     events,
                     "provider_transport_failed",
@@ -1256,21 +1657,28 @@ def execute_openai_compatible(
                 )
                 break
 
-            request_id = response.headers.get("x-request-id")
-            if request_id:
-                http_request_ids.append(request_id)
-            response_record: dict[str, Any] = {
-                "logical_call": logical_calls,
-                "status": response.status,
-                "request_id": request_id,
-                **_request_trace(body, config.request_trace_mode),
-            }
+            request_id = response_record.get("request_id")
             if response.status < 200 or response.status >= 300:
-                decoded_error = _attach_response_body_evidence(
-                    response_record,
+                payload, receipt_error = capture_payload_receipt(
                     response,
-                    preserve_raw=config.preserve_raw_responses,
+                    response_record,
+                    require_protocol=False,
                 )
+                if payload is None and "response_text" not in response_record:
+                    decoded_error = _attach_response_body_evidence(
+                        response_record,
+                        response,
+                        preserve_raw=config.preserve_raw_responses,
+                        secrets=provider_secrets,
+                    )
+                elif payload is not None:
+                    decoded_error = json.dumps(
+                        _redact_response(payload, provider_secrets),
+                        sort_keys=True,
+                        ensure_ascii=False,
+                    )
+                else:
+                    decoded_error = str(response_record.get("response_text", receipt_error or ""))
                 trace["requests"].append(response_record)
                 event_type = (
                     "provider_rate_limited" if response.status == 429 else "provider_http_error"
@@ -1289,44 +1697,89 @@ def execute_openai_compatible(
                     if config.preserve_raw_responses
                     else f"Provider returned HTTP {response.status}; response body withheld."
                 )
+                stderr = _redact_secrets(stderr, provider_secrets)
                 break
 
+            usage_recorded = False
             try:
                 payload = _decode_json(response)
                 usage_accumulator.add(_usage_values(payload, config.api_style))
+                usage_recorded = True
                 provider_response_id = payload.get("id")
                 if isinstance(provider_response_id, str):
                     provider_response_ids.append(provider_response_id)
+
+                terminal = _terminal_provider_outcome(payload, config.api_style)
+                if terminal is not None:
+                    if config.preserve_raw_responses:
+                        response_record["response"] = _redact_response(payload, provider_secrets)
+                    else:
+                        response_record["response_id"] = provider_response_id
+                        response_record["usage"] = _redact_response(
+                            payload.get("usage"),
+                            provider_secrets,
+                        )
+                        response_record["response_sha256"] = hashlib.sha256(response.body).hexdigest()
+                        response_record["response_bytes"] = len(response.body)
+                    trace["requests"].append(response_record)
+                    outcome, event_type, detail = terminal
+                    stderr = _redact_secrets(detail, provider_secrets)
+                    _event(
+                        events,
+                        event_type,
+                        "Provider returned a non-complete terminal state.",
+                        logical_call=logical_calls,
+                        request_id=request_id,
+                        detail=stderr,
+                    )
+                    break
 
                 if config.api_style == OpenAIAPIStyle.RESPONSES:
                     parsed_text, pending_calls = _parse_responses_output(payload)
                     output_items = payload.get("output")
                     if isinstance(output_items, list):
                         conversation.extend(
-                            dict(item) for item in output_items if isinstance(item, Mapping)
+                            dict(item)
+                            for item in output_items
+                            if isinstance(item, Mapping)
+                            and not (
+                                config.store is False
+                                and item.get("type") == "reasoning"
+                                and not item.get("encrypted_content")
+                            )
                         )
                 else:
                     parsed_text, pending_calls, assistant_message = _parse_chat_output(payload)
                     conversation.append(assistant_message)
 
+                parsed_text = _redact_secrets(parsed_text, provider_secrets)
                 if parsed_text:
                     final_text = parsed_text
                 if config.preserve_raw_responses:
-                    response_record["response"] = payload
+                    response_record["response"] = _redact_response(payload, provider_secrets)
                 else:
                     response_record["response_id"] = provider_response_id
-                    response_record["usage"] = payload.get("usage")
+                    response_record["usage"] = _redact_response(
+                        payload.get("usage"),
+                        provider_secrets,
+                    )
                     response_record["output_text"] = parsed_text
+                    response_record["response_sha256"] = hashlib.sha256(response.body).hexdigest()
+                    response_record["response_bytes"] = len(response.body)
                 trace["requests"].append(response_record)
             except ProviderProtocolError as error:
+                if not usage_recorded:
+                    usage_accumulator.mark_unknown()
                 _attach_response_body_evidence(
                     response_record,
                     response,
                     preserve_raw=config.preserve_raw_responses,
+                    secrets=provider_secrets,
                 )
-                trace["requests"].append(response_record)
+                if response_record not in trace["requests"]:
+                    trace["requests"].append(response_record)
                 outcome = OutcomeStatus.PROTOCOL_INVALID
-                stderr = str(error)
+                stderr = _redact_secrets(str(error), provider_secrets)
                 _event(
                     events,
                     "provider_protocol_invalid",
@@ -1334,6 +1787,9 @@ def execute_openai_compatible(
                     logical_call=logical_calls,
                     error=stderr,
                 )
+                break
+
+            if outcome != OutcomeStatus.PASS:
                 break
 
             token_failures = _token_budget_failures(
@@ -1409,8 +1865,8 @@ def execute_openai_compatible(
                     {
                         "name": pending["name"],
                         "call_id": pending["call_id"],
-                        "arguments": pending["arguments"],
-                        "result": result,
+                        "arguments": _redact_secrets(pending["arguments"], provider_secrets),
+                        "result": _redact_response(result, provider_secrets),
                     }
                 )
                 _event(
@@ -1465,6 +1921,25 @@ def execute_openai_compatible(
             "Provider run was interrupted locally.",
         )
 
+    collisions = _quarantine_reserved_collisions(output_dir, config)
+    if collisions:
+        prior_outcome = outcome
+        outcome = OutcomeStatus.PROTOCOL_INVALID
+        collision_summary = ", ".join(
+            f"{item['collision_path']} -> {item['preserved_as']}" for item in collisions
+        )
+        stderr = (
+            f"{stderr}\n" if stderr else ""
+        ) + f"Candidate output collided with adapter evidence paths: {collision_summary}"
+        _event(
+            events,
+            "adapter_evidence_path_collision",
+            "Candidate output collided with adapter-owned evidence paths and was preserved.",
+            prior_outcome=prior_outcome.value,
+            collisions=collisions,
+        )
+        trace["reserved_path_collisions"] = collisions
+
     elapsed = time.perf_counter() - start
     usage_values = usage_accumulator.finish()
     for field_name, value in usage_values.items():
@@ -1496,7 +1971,7 @@ def execute_openai_compatible(
         metadata={
             "adapter_id": config.adapter_id,
             "api_style": config.api_style.value,
-            "endpoint": config.endpoint,
+            "endpoint": trace_endpoint,
             "http_request_ids": sorted(set(http_request_ids)),
             "provider_response_ids": sorted(set(provider_response_ids)),
             "provider_requests": logical_calls + transport_retries,

@@ -413,7 +413,7 @@ def demo_command(
             cached_input_tokens=0,
             cache_write_tokens=0,
             reasoning_tokens=300 if candidate == "good" else 500,
-            output_tokens=200,
+            output_tokens=500 if candidate == "good" else 700,
             image_units=0.0,
             video_units=0.0,
             model_calls=1,
