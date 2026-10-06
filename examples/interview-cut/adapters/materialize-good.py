@@ -37,7 +37,7 @@ def main() -> None:
                 {
                     "input_tokens": 1000,
                     "reasoning_tokens": 300,
-                    "output_tokens": 200,
+                    "output_tokens": 500,
                     "model_calls": 1,
                     "tool_calls": 4,
                     "actual_candidate_cost_usd": 0.01,

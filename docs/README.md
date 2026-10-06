@@ -13,6 +13,7 @@
 ## Operations
 
 - [Running](RUNNING.md)
+- [Provider and agent-harness adapters](PROVIDER_ADAPTERS.md)
 - [Resolve and control surfaces](RESOLVE.md)
 - [Economics](ECONOMICS.md)
 - [Roadmap](ROADMAP.md)
@@ -24,3 +25,4 @@
 - [ADR 0003: No universal composite score](adr/0003-no-universal-score.md)
 - [ADR 0004: Judge evidence transform is part of JudgeStack](adr/0004-judge-evidence-transform.md)
 - [ADR 0005: Semantic capability ontology](adr/0005-semantic-capability-ontology.md)
+- [ADR 0006: Unknown provider usage is not zero](adr/0006-unknown-usage-is-not-zero.md)

@@ -81,9 +81,7 @@ def _evidence(example_root: Path, tmp_path: Path):
     return result, verification, judge_pack, judge_stack, judgment
 
 
-def test_evidence_chain_records_all_upstream_digests(
-    example_root: Path, tmp_path: Path
-) -> None:
+def test_evidence_chain_records_all_upstream_digests(example_root: Path, tmp_path: Path) -> None:
     result, verification, _, _, judgment = _evidence(example_root, tmp_path)
     scoring = load_model(example_root / "policies/scoring.yaml", ScoringPolicy)
     pricing = load_model(example_root / "policies/pricing.yaml", PricingPolicy)
@@ -112,9 +110,7 @@ def test_qualification_receipt_cannot_be_reused_for_changed_judge_stack(
         validate_judge_stack(judge_pack, judge_stack)
 
 
-def test_judgment_verdict_must_match_declared_threshold(
-    example_root: Path, tmp_path: Path
-) -> None:
+def test_judgment_verdict_must_match_declared_threshold(example_root: Path, tmp_path: Path) -> None:
     result, _, judge_pack, _, _ = _evidence(example_root, tmp_path)
     unqualified_stack = load_model(example_root / "policies/judge-stack.yaml", JudgeStack)
     criteria = [
@@ -160,9 +156,7 @@ def test_objective_only_instrument_scores_without_semantic_judgment(
     assert score.trust.comparability == ComparabilityStatus.VALID_NON_COMPARABLE
 
 
-def test_required_semantic_judgment_cannot_be_omitted(
-    example_root: Path, tmp_path: Path
-) -> None:
+def test_required_semantic_judgment_cannot_be_omitted(example_root: Path, tmp_path: Path) -> None:
     result, verification, _, _, _ = _evidence(example_root, tmp_path)
     score = score_result(
         result=result,
@@ -261,11 +255,29 @@ def test_score_rejects_unqualified_panel_claim(example_root: Path, tmp_path: Pat
             result=result,
             verification=verification,
             judgment=judgment,
-            scoring_policy=load_model(
-                example_root / "policies/scoring.yaml", ScoringPolicy
-            ),
-            pricing_policy=load_model(
-                example_root / "policies/pricing.yaml", PricingPolicy
-            ),
+            scoring_policy=load_model(example_root / "policies/scoring.yaml", ScoringPolicy),
+            pricing_policy=load_model(example_root / "policies/pricing.yaml", PricingPolicy),
             trust_receipt=trust,
         )
+
+
+def test_manual_capture_marks_unverifiable_resource_limit_not_proven(
+    example_root: Path, tmp_path: Path
+) -> None:
+    compiled = compile_task_file(example_root / "task.yaml", tmp_path / "compiled-unverified")
+    execution = payload_as(compiled.execution_pack, ExecutionPack, expected_kind="execution_pack")
+    stack = load_model(example_root / "stacks/mock-good.yaml", RunStack)
+    stack.resource_envelope.max_input_tokens = 100
+    artifact_root = tmp_path / "manual-unverified"
+    artifact_root.mkdir()
+    (artifact_root / "receipt.txt").write_text("evidence", encoding="utf-8")
+    result = capture_manual_result(
+        execution_pack=execution,
+        run_stack=stack,
+        run_condition=RunCondition(attempt_id="unverified-budget", clean_state_id="clean"),
+        output_dir=artifact_root,
+        usage=UsageRecord(input_tokens=None),
+    )
+    assert result.outcome == OutcomeStatus.NOT_PROVEN
+    assert "input_tokens_not_reported" in result.known_missing_evidence
+    assert result.events[-1].event_type == "resource_budget_unverified"

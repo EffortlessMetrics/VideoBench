@@ -75,9 +75,7 @@ def test_command_runner_records_timeout(example_root: Path, tmp_path: Path) -> N
     assert result.outcome == OutcomeStatus.TIMED_OUT
 
 
-def test_command_runner_rejects_stale_output_directory(
-    example_root: Path, tmp_path: Path
-) -> None:
+def test_command_runner_rejects_stale_output_directory(example_root: Path, tmp_path: Path) -> None:
     compiled = compile_task_file(example_root / "task.yaml", tmp_path / "compiled")
     execution = payload_as(compiled.execution_pack, ExecutionPack, expected_kind="execution_pack")
     stack = load_model(example_root / "stacks/mock-good.yaml", RunStack)
@@ -96,9 +94,7 @@ def test_command_runner_rejects_stale_output_directory(
         )
 
 
-def test_command_runner_rejects_stale_usage_receipt(
-    example_root: Path, tmp_path: Path
-) -> None:
+def test_command_runner_rejects_stale_usage_receipt(example_root: Path, tmp_path: Path) -> None:
     compiled = compile_task_file(example_root / "task.yaml", tmp_path / "compiled")
     execution = payload_as(compiled.execution_pack, ExecutionPack, expected_kind="execution_pack")
     stack = load_model(example_root / "stacks/mock-good.yaml", RunStack)
@@ -136,9 +132,7 @@ def test_command_runner_rejects_reserved_environment_override(
         )
 
 
-def test_command_runner_records_invalid_usage_receipt(
-    example_root: Path, tmp_path: Path
-) -> None:
+def test_command_runner_records_invalid_usage_receipt(example_root: Path, tmp_path: Path) -> None:
     compiled = compile_task_file(example_root / "task.yaml", tmp_path / "compiled")
     execution = payload_as(compiled.execution_pack, ExecutionPack, expected_kind="execution_pack")
     stack = load_model(example_root / "stacks/mock-good.yaml", RunStack)
@@ -182,3 +176,42 @@ def test_command_runner_records_failure_to_start(example_root: Path, tmp_path: P
     )
     assert result.outcome == OutcomeStatus.TOOL_FAILURE
     assert result.events[-1].event_type == "run_failed_to_start"
+
+
+def test_command_runner_marks_unreported_usage_unknown(example_root: Path, tmp_path: Path) -> None:
+    compiled = compile_task_file(example_root / "task.yaml", tmp_path / "compiled")
+    execution = payload_as(compiled.execution_pack, ExecutionPack, expected_kind="execution_pack")
+    stack = load_model(example_root / "stacks/mock-good.yaml", RunStack)
+    result = run_command(
+        execution_pack_path=compiled.execution_pack,
+        execution_pack=execution,
+        run_stack=stack,
+        run_condition=RunCondition(attempt_id="cmd-no-usage", clean_state_id="clean"),
+        command=[sys.executable, "-c", "print('done')"],
+        workspace=tmp_path / "workspace",
+        output_dir=tmp_path / "output",
+    )
+    assert result.usage.input_tokens is None
+    assert result.usage.output_tokens is None
+    assert "input_tokens_not_reported" in result.known_missing_evidence
+    assert "candidate_cost_not_reported" in result.known_missing_evidence
+
+
+def test_command_runner_rejects_missing_expected_usage_receipt(
+    example_root: Path, tmp_path: Path
+) -> None:
+    compiled = compile_task_file(example_root / "task.yaml", tmp_path / "compiled")
+    execution = payload_as(compiled.execution_pack, ExecutionPack, expected_kind="execution_pack")
+    stack = load_model(example_root / "stacks/mock-good.yaml", RunStack)
+    result = run_command(
+        execution_pack_path=compiled.execution_pack,
+        execution_pack=execution,
+        run_stack=stack,
+        run_condition=RunCondition(attempt_id="cmd-missing-usage", clean_state_id="clean"),
+        command=[sys.executable, "-c", "print('done')"],
+        workspace=tmp_path / "workspace",
+        output_dir=tmp_path / "output",
+        usage_path=tmp_path / "usage.json",
+    )
+    assert result.outcome == OutcomeStatus.PROTOCOL_INVALID
+    assert "valid_usage_receipt" in result.known_missing_evidence

@@ -30,6 +30,13 @@ Keep observation and action surfaces separate. Keep autonomous, scripted-collabo
 - Candidate success telemetry is diagnostic, not authoritative.
 - Model output, terminal-state verification, judgment, score, study analysis, and report remain separate artifacts.
 - Raw evidence is immutable. Rejudging, reweighting, repricing, and rerunning are different operations.
+- Provider adapters translate into generic contracts. Provider request, response, usage,
+  retry, and tool records must not leak provider-specific types into verifier, judge,
+  scoring, or study models.
+- Missing provider usage is unknown, not zero. Do not restore numeric defaults merely to
+  simplify arithmetic or reports.
+- Secrets come from environment variables and never enter durable traces. Request bodies
+  containing inline media must follow the declared trace mode.
 
 ## Protect creative validity
 
@@ -71,7 +78,8 @@ During focused work:
 
 ```bash
 python -m pytest tests/path_or_test.py
-python -m ruff check src tests
+python -m ruff format --check .
+python -m ruff check .
 python -m mypy src/videobench
 ```
 

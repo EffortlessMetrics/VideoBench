@@ -123,9 +123,17 @@
       "type": "string"
     },
     "candidate_list_equivalent_cost_usd": {
-      "minimum": 0.0,
-      "title": "Candidate List Equivalent Cost Usd",
-      "type": "number"
+      "anyOf": [
+        {
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Candidate List Equivalent Cost Usd"
     },
     "candidate_metered_cost_usd": {
       "anyOf": [
@@ -181,9 +189,17 @@
       "type": "number"
     },
     "input_tokens": {
-      "minimum": 0,
-      "title": "Input Tokens",
-      "type": "integer"
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Input Tokens"
     },
     "instrument": {
       "$ref": "#/$defs/Instrument"
@@ -219,9 +235,17 @@
       "type": "integer"
     },
     "output_tokens": {
-      "minimum": 0,
-      "title": "Output Tokens",
-      "type": "integer"
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Output Tokens"
     },
     "pricing_policy_id": {
       "title": "Pricing Policy Id",
@@ -239,9 +263,17 @@
       "type": "array"
     },
     "reasoning_tokens": {
-      "minimum": 0,
-      "title": "Reasoning Tokens",
-      "type": "integer"
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Reasoning Tokens"
     },
     "scoring_policy_id": {
       "title": "Scoring Policy Id",
@@ -312,10 +344,6 @@
     "criterion_verdicts",
     "reason_codes",
     "candidate_metered_cost_usd",
-    "candidate_list_equivalent_cost_usd",
-    "input_tokens",
-    "output_tokens",
-    "reasoning_tokens",
     "model_calls",
     "tool_calls",
     "wall_seconds",

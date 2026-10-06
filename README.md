@@ -14,7 +14,7 @@ model + harness + observation surface + action surface
 
 VideoBench does not collapse operation, editorial judgment, revision, reliability, and economics into one score. Those constructs share a receipted protocol and remain separate instruments.
 
-> **Status:** usable public-alpha foundation. The repository ships a complete synthetic vertical instrument, a generic command/manual runner, independent verification, judge qualification and import, versioned pricing and scoring, family-level aggregation, JSON Schemas, and a read-only DaVinci Resolve state probe. It does not yet ship a professionally reviewed media pack or an official comparative model result.
+> **Status:** usable public-alpha foundation. The repository ships a complete synthetic vertical instrument, generic command/manual execution, a first-party OpenAI-compatible provider and function-tool adapter, independent verification, judge qualification and import, versioned pricing and scoring, family-level aggregation, JSON Schemas, and a read-only DaVinci Resolve state probe. It does not yet ship a professionally reviewed media pack or an official comparative model result.
 
 `VideoBench` is the repository's working public name. The Python distribution is named
 `videobench-workbench` so this alpha does not claim the already-occupied `videobench`
@@ -24,6 +24,7 @@ package name.
 
 - Compile one authored task into blind `ExecutionPack`, `VerifierPack`, and `JudgePack` views.
 - Run any agent, MCP wrapper, script, or GUI harness through a command adapter—or import an external product session manually.
+- Run Responses- or Chat Completions-compatible model endpoints through a receipted function-tool harness with explicit retries, budgets, usage evidence, and request-trace policy.
 - Capture immutable work results, raw usage, event journals, artifact hashes, semantic JSON digests, and explicit upstream evidence links.
 - Verify terminal state independently of the candidate tool's success claims.
 - Qualify judges against known anchors and controlled mutants, bound to the exact panel and evidence-transform configuration.
@@ -109,6 +110,24 @@ videobench run-command \
 The artifact directory must be absent or empty at start. VideoBench rejects stale output
 rather than silently mixing evidence from two attempts.
 
+Run a model endpoint directly through the first-party provider adapter:
+
+```bash
+videobench run-openai-compatible \
+  --execution-pack .videobench/forms/interview-cut/execution-pack.json \
+  --run-stack path/to/run-stack.yaml \
+  --run-condition path/to/run-condition.yaml \
+  --adapter-config examples/provider-adapters/openai-responses.yaml \
+  --asset-root examples/interview-cut \
+  --workspace .videobench/work/attempt-001 \
+  --artifact-root .videobench/work/attempt-001/output \
+  --out .videobench/runs/attempt-001.json
+```
+
+Credentials and extra sensitive headers come from environment variables. Provider-metered
+usage remains unknown when the endpoint does not report it; VideoBench never converts a
+missing receipt into zero cost. See [Provider adapters](docs/PROVIDER_ADAPTERS.md).
+
 A ChatGPT, Claude, Codex, Resolve GUI, or other product session can instead be captured after the work is complete:
 
 ```bash
@@ -161,6 +180,7 @@ Candidate execution cannot import verifier or judge contracts. Verifier and judg
 contracts/schemas/          checked-in JSON Schemas
 src/videobench/             Python package and CLI
 examples/interview-cut/     complete public development form
+examples/provider-adapters/ provider transport/evidence examples
 tests/                       protocol and adapter tests
 docs/                        construct, protocol, operations, and ADRs
 ```
@@ -185,6 +205,7 @@ docs/                        construct, protocol, operations, and ADRs
 - [Protocol and artifact graph](docs/PROTOCOL.md)
 - [Task authoring](docs/TASK_AUTHORING.md)
 - [Running and integration](docs/RUNNING.md)
+- [Provider and agent-harness adapters](docs/PROVIDER_ADAPTERS.md)
 - [Judging and judge qualification](docs/JUDGING.md)
 - [Resolve and control surfaces](docs/RESOLVE.md)
 - [Economics](docs/ECONOMICS.md)

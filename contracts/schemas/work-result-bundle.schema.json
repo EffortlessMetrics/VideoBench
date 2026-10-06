@@ -592,12 +592,20 @@
     },
     "UsageRecord": {
       "additionalProperties": false,
+      "description": "Raw resource evidence for one attempt.\n\nProvider-metered dimensions are optional on purpose. ``None`` means the surface did\nnot expose enough evidence to establish the value; it must never be interpreted as\nzero. ``input_tokens`` and ``output_tokens`` retain provider-reported inclusive totals;\ncached-input and reasoning counts are subsets used to partition those totals under a\npricing policy. Locally observable counts and durations retain concrete zero defaults.",
       "properties": {
         "active_agent_seconds": {
-          "default": 0.0,
-          "minimum": 0.0,
-          "title": "Active Agent Seconds",
-          "type": "number"
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Active Agent Seconds"
         },
         "actual_candidate_cost_usd": {
           "anyOf": [
@@ -613,16 +621,30 @@
           "title": "Actual Candidate Cost Usd"
         },
         "cache_write_tokens": {
-          "default": 0,
-          "minimum": 0,
-          "title": "Cache Write Tokens",
-          "type": "integer"
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cache Write Tokens"
         },
         "cached_input_tokens": {
-          "default": 0,
-          "minimum": 0,
-          "title": "Cached Input Tokens",
-          "type": "integer"
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cached Input Tokens"
         },
         "compaction_events": {
           "default": 0,
@@ -643,16 +665,30 @@
           "type": "number"
         },
         "image_units": {
-          "default": 0.0,
-          "minimum": 0.0,
-          "title": "Image Units",
-          "type": "number"
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Image Units"
         },
         "input_tokens": {
-          "default": 0,
-          "minimum": 0,
-          "title": "Input Tokens",
-          "type": "integer"
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Input Tokens"
         },
         "metadata": {
           "additionalProperties": true,
@@ -672,28 +708,56 @@
           "type": "integer"
         },
         "output_tokens": {
-          "default": 0,
-          "minimum": 0,
-          "title": "Output Tokens",
-          "type": "integer"
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Output Tokens"
         },
         "reasoning_tokens": {
-          "default": 0,
-          "minimum": 0,
-          "title": "Reasoning Tokens",
-          "type": "integer"
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reasoning Tokens"
         },
         "render_seconds": {
-          "default": 0.0,
-          "minimum": 0.0,
-          "title": "Render Seconds",
-          "type": "number"
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Render Seconds"
         },
         "resolve_processing_seconds": {
-          "default": 0.0,
-          "minimum": 0.0,
-          "title": "Resolve Processing Seconds",
-          "type": "number"
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Resolve Processing Seconds"
         },
         "tool_calls": {
           "default": 0,
@@ -708,10 +772,17 @@
           "type": "integer"
         },
         "video_units": {
-          "default": 0.0,
-          "minimum": 0.0,
-          "title": "Video Units",
-          "type": "number"
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Video Units"
         },
         "wall_seconds": {
           "default": 0.0,

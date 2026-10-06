@@ -12,6 +12,7 @@ from rich.table import Table
 
 from videobench import __version__
 from videobench.adapters.media import ffprobe
+from videobench.adapters.openai_compatible import OpenAICompatibleConfig
 from videobench.adapters.resolve import ResolveUnavailable, capture_resolve_snapshot
 from videobench.analysis import render_score_markdown, score_result, summarize_study
 from videobench.compiler import compile_task_file, validate_task_source
@@ -38,7 +39,12 @@ from videobench.contracts import (
 )
 from videobench.io import load_model, payload_as, write_envelope, write_json
 from videobench.judge import import_judgment_file, qualify_judge
-from videobench.runner import capture_manual_result, run_command, run_mock_candidate
+from videobench.runner import (
+    capture_manual_result,
+    run_command,
+    run_mock_candidate,
+    run_openai_compatible,
+)
 from videobench.schemas import export_schemas
 from videobench.types import OutcomeStatus
 from videobench.verifier import verify_result
@@ -151,6 +157,42 @@ def run_command_cli(
     )
     write_envelope(output_path, "work_result_bundle", result)
     console.print(f"[bold]{result.outcome.value}[/bold] {len(result.artifacts)} captured artifacts")
+
+
+@app.command("run-openai-compatible")
+def run_openai_compatible_command(
+    execution_pack_path: Annotated[Path, typer.Option("--execution-pack", exists=True)],
+    run_stack_path: Annotated[Path, typer.Option("--run-stack", exists=True)],
+    run_condition_path: Annotated[Path, typer.Option("--run-condition", exists=True)],
+    adapter_config_path: Annotated[Path, typer.Option("--adapter-config", exists=True)],
+    asset_root: Annotated[Path, typer.Option("--asset-root", exists=True, file_okay=False)],
+    workspace: Annotated[Path, typer.Option("--workspace")],
+    artifact_root: Annotated[Path, typer.Option("--artifact-root")],
+    output_path: Annotated[Path, typer.Option("--out", "-o")],
+) -> None:
+    """Run a receipted OpenAI-compatible provider and function-tool harness."""
+
+    execution = payload_as(execution_pack_path, ExecutionPack, expected_kind="execution_pack")
+    stack = load_model(run_stack_path, RunStack)
+    condition = load_model(run_condition_path, RunCondition)
+    config = load_model(adapter_config_path, OpenAICompatibleConfig)
+    result = run_openai_compatible(
+        execution_pack_path=execution_pack_path,
+        execution_pack=execution,
+        run_stack=stack,
+        run_condition=condition,
+        config=config,
+        asset_root=asset_root,
+        workspace=workspace,
+        output_dir=artifact_root,
+    )
+    write_envelope(output_path, "work_result_bundle", result)
+    console.print(
+        f"[bold]{result.outcome.value}[/bold] "
+        f"model_calls={result.usage.model_calls} "
+        f"tool_calls={result.usage.tool_calls} "
+        f"artifacts={len(result.artifacts)}"
+    )
 
 
 @app.command("verify")
@@ -368,8 +410,12 @@ def demo_command(
         )
         usage = UsageRecord(
             input_tokens=1000 if candidate == "good" else 1200,
+            cached_input_tokens=0,
+            cache_write_tokens=0,
             reasoning_tokens=300 if candidate == "good" else 500,
-            output_tokens=200,
+            output_tokens=500 if candidate == "good" else 700,
+            image_units=0.0,
+            video_units=0.0,
             model_calls=1,
             tool_calls=4 if candidate == "good" else 7,
             wall_seconds=2.0 if candidate == "good" else 3.5,
@@ -419,8 +465,7 @@ def demo_command(
     study_summary = summarize_study(study, outcomes)
     if study_summary.notes:
         raise RuntimeError(
-            "Instrument validation study is incomplete or stale: "
-            + "; ".join(study_summary.notes)
+            "Instrument validation study is incomplete or stale: " + "; ".join(study_summary.notes)
         )
     write_envelope(output_dir / "study-summary.json", "study_summary", study_summary)
 

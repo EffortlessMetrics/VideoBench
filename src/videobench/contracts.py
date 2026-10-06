@@ -7,7 +7,7 @@ separate from verifier-facing and judge-facing artifacts by construction.
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Literal
 
 from pydantic import Field, model_validator
@@ -31,7 +31,7 @@ from videobench.types import (
 )
 
 
-class MediaType(str, Enum):
+class MediaType(StrEnum):
     VIDEO = "video"
     AUDIO = "audio"
     IMAGE = "image"
@@ -43,7 +43,7 @@ class MediaType(str, Enum):
     OTHER = "other"
 
 
-class CheckType(str, Enum):
+class CheckType(StrEnum):
     ARTIFACT_EXISTS = "artifact_exists"
     ARTIFACT_COUNT_AT_LEAST = "artifact_count_at_least"
     FILE_SHA256_EQUALS = "file_sha256_equals"
@@ -328,22 +328,31 @@ class RunEvent(StrictModel):
 
 
 class UsageRecord(StrictModel):
-    input_tokens: int = Field(default=0, ge=0)
-    cached_input_tokens: int = Field(default=0, ge=0)
-    cache_write_tokens: int = Field(default=0, ge=0)
-    reasoning_tokens: int = Field(default=0, ge=0)
-    output_tokens: int = Field(default=0, ge=0)
-    image_units: float = Field(default=0.0, ge=0.0)
-    video_units: float = Field(default=0.0, ge=0.0)
+    """Raw resource evidence for one attempt.
+
+    Provider-metered dimensions are optional on purpose. ``None`` means the surface did
+    not expose enough evidence to establish the value; it must never be interpreted as
+    zero. ``input_tokens`` and ``output_tokens`` retain provider-reported inclusive totals;
+    cached-input and reasoning counts are subsets used to partition those totals under a
+    pricing policy. Locally observable counts and durations retain concrete zero defaults.
+    """
+
+    input_tokens: int | None = Field(default=None, ge=0)
+    cached_input_tokens: int | None = Field(default=None, ge=0)
+    cache_write_tokens: int | None = Field(default=None, ge=0)
+    reasoning_tokens: int | None = Field(default=None, ge=0)
+    output_tokens: int | None = Field(default=None, ge=0)
+    image_units: float | None = Field(default=None, ge=0.0)
+    video_units: float | None = Field(default=None, ge=0.0)
     model_calls: int = Field(default=0, ge=0)
     tool_calls: int = Field(default=0, ge=0)
     compaction_events: int = Field(default=0, ge=0)
     model_retries: int = Field(default=0, ge=0)
     transport_retries: int = Field(default=0, ge=0)
     wall_seconds: float = Field(default=0.0, ge=0.0)
-    active_agent_seconds: float = Field(default=0.0, ge=0.0)
-    resolve_processing_seconds: float = Field(default=0.0, ge=0.0)
-    render_seconds: float = Field(default=0.0, ge=0.0)
+    active_agent_seconds: float | None = Field(default=None, ge=0.0)
+    resolve_processing_seconds: float | None = Field(default=None, ge=0.0)
+    render_seconds: float | None = Field(default=None, ge=0.0)
     human_interventions: int = Field(default=0, ge=0)
     human_seconds: float = Field(default=0.0, ge=0.0)
     actual_candidate_cost_usd: float | None = Field(default=None, ge=0.0)
@@ -555,11 +564,11 @@ class ScoreView(StrictModel):
     criterion_verdicts: dict[str, JudgmentVerdict]
     reason_codes: list[str]
     candidate_metered_cost_usd: float | None
-    candidate_list_equivalent_cost_usd: float = Field(ge=0.0)
+    candidate_list_equivalent_cost_usd: float | None = Field(default=None, ge=0.0)
     judge_cost_usd: float | None = Field(default=None, ge=0.0)
-    input_tokens: int = Field(ge=0)
-    output_tokens: int = Field(ge=0)
-    reasoning_tokens: int = Field(ge=0)
+    input_tokens: int | None = Field(default=None, ge=0)
+    output_tokens: int | None = Field(default=None, ge=0)
+    reasoning_tokens: int | None = Field(default=None, ge=0)
     model_calls: int = Field(ge=0)
     tool_calls: int = Field(ge=0)
     wall_seconds: float = Field(ge=0.0)
@@ -617,7 +626,8 @@ class StackSummary(StrictModel):
     families: int
     accepted_work_rate: float
     family_macro_acceptance: float
-    mean_list_equivalent_cost_usd: float
+    priced_attempts: int = Field(ge=0)
+    mean_list_equivalent_cost_usd: float | None = Field(default=None, ge=0.0)
     mean_wall_seconds: float
     mean_human_seconds: float
     indeterminate_rate: float
@@ -633,9 +643,9 @@ class QualificationCase(StrictModel):
     case_id: str
     criterion_id: str
     expected_verdict: JudgmentVerdict
-    expected_score_relation: Literal[
-        "higher", "lower", "equal", "not_applicable"
-    ] = "not_applicable"
+    expected_score_relation: Literal["higher", "lower", "equal", "not_applicable"] = (
+        "not_applicable"
+    )
     pair_id: str | None = None
     injection_sentinel: bool = False
 
