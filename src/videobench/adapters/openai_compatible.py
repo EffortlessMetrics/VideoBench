@@ -175,7 +175,9 @@ class CommandToolSpec(StrictModel):
         try:
             validator_for(self.parameters).check_schema(self.parameters)
         except JSONSchemaError as error:
-            raise ValueError(f"command tool parameters are not valid JSON Schema: {error}") from error
+            raise ValueError(
+                f"command tool parameters are not valid JSON Schema: {error}"
+            ) from error
         if self.strict:
             _validate_strict_function_schema(self.parameters)
         return self
@@ -232,8 +234,10 @@ class OpenAICompatibleConfig(StrictModel):
             raise ValueError("endpoint must not contain credentials")
         if parsed.fragment:
             raise ValueError("endpoint must not contain a URL fragment")
-        if parsed.scheme == "http" and not self.allow_insecure_http and not _is_loopback_hostname(
-            parsed.hostname
+        if (
+            parsed.scheme == "http"
+            and not self.allow_insecure_http
+            and not _is_loopback_hostname(parsed.hostname)
         ):
             raise ValueError(
                 "plain HTTP endpoints are limited to loopback unless "
@@ -248,7 +252,9 @@ class OpenAICompatibleConfig(StrictModel):
         validate_relative_evidence_path(self.final_text_path)
         validate_relative_evidence_path(self.trace_path)
         if _paths_collide(self.final_text_path, self.trace_path):
-            raise ValueError("final_text_path and trace_path must be distinct non-overlapping paths")
+            raise ValueError(
+                "final_text_path and trace_path must be distinct non-overlapping paths"
+            )
         names = [tool.name for tool in self.command_tools]
         reserved = {
             "videobench_write_text_artifact",
@@ -482,7 +488,9 @@ def _candidate_output_path(
     return _safe_output_path(output_dir, relative)
 
 
-def _validate_output_contract(execution_pack: ExecutionPack, config: OpenAICompatibleConfig) -> None:
+def _validate_output_contract(
+    execution_pack: ExecutionPack, config: OpenAICompatibleConfig
+) -> None:
     collisions = sorted(
         deliverable.path
         for deliverable in execution_pack.output_contract.deliverables
@@ -986,9 +994,7 @@ def _optional_int(value: Mapping[str, Any], key: str) -> int | None:
         return None
     candidate = value[key]
     if isinstance(candidate, bool) or not isinstance(candidate, int) or candidate < 0:
-        raise ProviderProtocolError(
-            f"Provider usage value {key} is malformed: {candidate!r}"
-        )
+        raise ProviderProtocolError(f"Provider usage value {key} is malformed: {candidate!r}")
     return candidate
 
 
@@ -1010,9 +1016,7 @@ def _validate_usage_subsets(values: Mapping[str, int | None]) -> None:
         total = values[total_name]
         subset = values[subset_name]
         if total is not None and subset is not None and subset > total:
-            raise ProviderProtocolError(
-                f"Provider usage subset {subset_name} exceeds {total_name}"
-            )
+            raise ProviderProtocolError(f"Provider usage subset {subset_name} exceeds {total_name}")
 
 
 def _terminal_provider_outcome(
@@ -1026,8 +1030,16 @@ def _terminal_provider_outcome(
         if not isinstance(status, str):
             raise ProviderProtocolError("Responses status must be a string when present")
         detail = payload.get("incomplete_details") or payload.get("error") or status
-        outcome = OutcomeStatus.NOT_PROVEN if status in {"incomplete", "in_progress"} else OutcomeStatus.TOOL_FAILURE
-        return outcome, f"provider_response_{status}", f"Responses API status was {status}: {detail}"
+        outcome = (
+            OutcomeStatus.NOT_PROVEN
+            if status in {"incomplete", "in_progress"}
+            else OutcomeStatus.TOOL_FAILURE
+        )
+        return (
+            outcome,
+            f"provider_response_{status}",
+            f"Responses API status was {status}: {detail}",
+        )
 
     choices = payload.get("choices")
     if not isinstance(choices, list) or not choices or not isinstance(choices[0], Mapping):
@@ -1719,7 +1731,9 @@ def execute_openai_compatible(
                             payload.get("usage"),
                             provider_secrets,
                         )
-                        response_record["response_sha256"] = hashlib.sha256(response.body).hexdigest()
+                        response_record["response_sha256"] = hashlib.sha256(
+                            response.body
+                        ).hexdigest()
                         response_record["response_bytes"] = len(response.body)
                     trace["requests"].append(response_record)
                     outcome, event_type, detail = terminal

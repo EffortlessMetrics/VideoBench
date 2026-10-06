@@ -60,9 +60,8 @@ def calculate_list_equivalent_cost(result: WorkResultBundle, policy: PricingPoli
         if subset_value > total_value:
             raise ValueError("priced token subset exceeds its inclusive total")
         return (
-            (total_value - subset_value) / million * total_rate
-            + subset_value / million * subset_rate
-        )
+            total_value - subset_value
+        ) / million * total_rate + subset_value / million * subset_rate
 
     input_cost = inclusive_partition_cost(
         total_value=usage.input_tokens,

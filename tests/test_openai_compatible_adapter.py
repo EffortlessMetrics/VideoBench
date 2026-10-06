@@ -1132,7 +1132,6 @@ def test_raw_response_opt_out_preserves_digest_not_error_body(
     assert "private-provider-detail" not in json.dumps(trace)
 
 
-
 def test_incomplete_responses_output_is_not_proven(example_root: Path, tmp_path: Path) -> None:
     pack_path, execution, stack, condition = _compiled(example_root, tmp_path)
     response = _response(
@@ -1140,7 +1139,9 @@ def test_incomplete_responses_output_is_not_proven(example_root: Path, tmp_path:
             "id": "resp-incomplete",
             "status": "incomplete",
             "incomplete_details": {"reason": "max_output_tokens"},
-            "output": [{"type": "message", "content": [{"type": "output_text", "text": "partial"}]}],
+            "output": [
+                {"type": "message", "content": [{"type": "output_text", "text": "partial"}]}
+            ],
             "usage": {"input_tokens": 10, "output_tokens": 4},
         }
     )
@@ -1192,7 +1193,11 @@ def test_chat_length_finish_is_not_proven(example_root: Path, tmp_path: Path) ->
 def test_retry_usage_and_each_attempt_are_preserved(example_root: Path, tmp_path: Path) -> None:
     pack_path, execution, stack, condition = _compiled(example_root, tmp_path)
     retry = _response(
-        {"id": "retry-response", "error": "busy", "usage": {"input_tokens": 40, "output_tokens": 10}},
+        {
+            "id": "retry-response",
+            "error": "busy",
+            "usage": {"input_tokens": 40, "output_tokens": 10},
+        },
         status=429,
         **{"x-request-id": "retry-request", "retry-after": "0"},
     )
