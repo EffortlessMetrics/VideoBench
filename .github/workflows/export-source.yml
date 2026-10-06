@@ -15,9 +15,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
+      - name: Archive committed source only
+        run: git archive --format=zip --output="$RUNNER_TEMP/videobench-source.zip" HEAD
       - uses: actions/upload-artifact@v4
         with:
           name: videobench-source-${{ github.sha }}
-          path: .
-          include-hidden-files: true
+          path: ${{ runner.temp }}/videobench-source.zip
+          if-no-files-found: error
           retention-days: 1
