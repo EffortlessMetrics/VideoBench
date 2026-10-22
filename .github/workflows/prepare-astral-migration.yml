@@ -5,6 +5,7 @@ on:
     branches: [modernize/astral-20261021]
     paths:
       - .github/maintenance/prepare_astral.py
+      - .github/maintenance/repair_astral.py
       - .github/workflows/prepare-astral-migration.yml
 
 permissions: {}
@@ -27,7 +28,9 @@ jobs:
           version: '0.13.4'
           enable-cache: false
       - name: Generate lock and qualify proposed source
-        run: python3 .github/maintenance/prepare_astral.py
+        run: |
+          python3 .github/maintenance/repair_astral.py
+          python3 .github/maintenance/prepare_astral.py
       - name: Preserve actual results, including failure
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
@@ -66,8 +69,8 @@ jobs:
           assert 0 < len(patch) <= 16 * 1024 * 1024
           assert hashlib.sha256(patch).hexdigest() == receipt['patch_sha256']
           subprocess.run(['git', 'apply', '--index', '--whitespace=error', str(root / 'candidate.patch')], check=True)
-          allowed = {'pyproject.toml', 'uv.lock', 'scripts/check.py', '.github/workflows/ci.yml', '.pre-commit-config.yaml', 'AGENTS.md', 'CONTRIBUTING.md', 'README.md'}
-          removed = {'.github/workflows/prepare-astral-migration.yml', '.github/maintenance/prepare_astral.py'}
+          allowed = {'pyproject.toml', 'uv.lock', 'scripts/check.py', '.github/workflows/ci.yml', '.pre-commit-config.yaml', 'AGENTS.md', 'CONTRIBUTING.md', 'README.md', 'src/videobench/runner.py', 'src/videobench/verifier.py', 'src/videobench/judge.py', 'tests/test_judge.py', 'tests/test_enum_rendering.py'}
+          removed = {'.github/workflows/prepare-astral-migration.yml', '.github/maintenance/prepare_astral.py', '.github/maintenance/repair_astral.py'}
           names = subprocess.check_output(['git', 'diff', '--cached', '--name-only', '-z']).decode().split('\0')[:-1]
           assert names and 'uv.lock' in names
           for name in names:
