@@ -22,12 +22,21 @@ jobs:
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955
         with:
-          python-version: ${{ matrix.python-version }}
-          cache: pip
-      - name: Install
-        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev]"
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e
+        with:
+          version: "0.13.4"
+          enable-cache: false
+      - name: Install locked environment
+        env:
+          UV_PYTHON: ${{ matrix.python-version }}
+        run: |
+          test -f uv.lock
+          uv lock --check
+          uv sync --locked --extra dev
       - name: Verify
-        run: python scripts/check.py
+        env:
+          UV_PYTHON: ${{ matrix.python-version }}
+        run: uv run --locked --no-sync python scripts/check.py
