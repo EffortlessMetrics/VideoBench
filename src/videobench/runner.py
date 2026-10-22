@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import time
 from collections.abc import Iterable, Mapping, Sequence
+from contextlib import suppress
 from pathlib import Path
 
 from videobench.canonical import path_sha256, sha256_hex
@@ -28,7 +29,6 @@ from videobench.contracts import (
 )
 from videobench.io import load_envelope
 from videobench.types import OutcomeStatus
-
 
 _MEDIA_BY_SUFFIX: dict[str, MediaType] = {
     ".mp4": MediaType.VIDEO,
@@ -117,7 +117,7 @@ def load_usage(path: Path | None) -> UsageRecord:
 
 def _budget_failures(
     envelope: ResourceEnvelope, usage: UsageRecord
-) -> tuple[list[dict[str, float | int]], list[str]]:
+) -> tuple[list[dict[str, str | float | int]], list[str]]:
     comparisons: list[tuple[str, float | int | None, float | int]] = [
         ("wall_seconds", envelope.max_wall_seconds, usage.wall_seconds),
         ("model_calls", envelope.max_model_calls, usage.model_calls),
@@ -253,9 +253,7 @@ def _require_empty_output_dir(output_dir: Path) -> None:
         if output_dir.is_symlink() or not output_dir.is_dir():
             raise ValueError(f"Output path must be a real directory: {output_dir}")
         if any(output_dir.iterdir()):
-            raise ValueError(
-                f"Output directory must be empty before a command run: {output_dir}"
-            )
+            raise ValueError(f"Output directory must be empty before a command run: {output_dir}")
     else:
         output_dir.mkdir(parents=True)
 
@@ -313,8 +311,7 @@ def run_command(
     overridden = reserved_env.intersection(extra_env or {})
     if overridden:
         raise ValueError(
-            "extra_env may not override VideoBench protocol variables: "
-            f"{sorted(overridden)}"
+            f"extra_env may not override VideoBench protocol variables: {sorted(overridden)}"
         )
 
     env = os.environ.copy()
@@ -403,10 +400,8 @@ def run_command(
 
     excluded: list[str] = []
     if usage_path is not None:
-        try:
+        with suppress(ValueError):
             excluded.append(usage_path.resolve().relative_to(output_dir.resolve()).as_posix())
-        except ValueError:
-            pass
 
     return _build_result(
         execution_pack=execution_pack,

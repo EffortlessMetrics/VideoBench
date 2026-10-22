@@ -9,6 +9,7 @@ from typing import Any
 from videobench.canonical import path_sha256, resolve_under_root, sha256_hex
 from videobench.contracts import (
     CheckResult,
+    CheckType,
     ObjectiveCheckSpec,
     VerificationBundle,
     VerifierPack,
@@ -121,11 +122,11 @@ def evaluate_check(check: ObjectiveCheckSpec, artifact_root: Path) -> CheckResul
 
         if check.check_type.value == "text_contains":
             text = path.read_text(encoding="utf-8")
-            expected = str(check.expected)
+            expected_text = str(check.expected)
             return _result(
                 check,
-                CheckStatus.PASS if expected in text else CheckStatus.FAIL,
-                actual=expected in text,
+                CheckStatus.PASS if expected_text in text else CheckStatus.FAIL,
+                actual=expected_text in text,
             )
 
         if (
@@ -178,7 +179,7 @@ def verify_capture_integrity(
     for artifact in result.artifacts:
         check = ObjectiveCheckSpec(
             check_id=f"capture-integrity:{artifact.artifact_id}",
-            check_type="file_sha256_equals",
+            check_type=CheckType.FILE_SHA256_EQUALS,
             artifact_path=artifact.path,
             expected=artifact.sha256,
             severity=CheckSeverity.FATAL,
@@ -233,9 +234,7 @@ def verify_result(
         for item in results
         if item.severity == CheckSeverity.FATAL and item.status != CheckStatus.PASS
     ]
-    reason_codes = sorted(
-        {item.reason_code for item in results if item.status != CheckStatus.PASS}
-    )
+    reason_codes = sorted({item.reason_code for item in results if item.status != CheckStatus.PASS})
 
     return VerificationBundle(
         task_id=result.task_id,

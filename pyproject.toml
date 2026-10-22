@@ -1,6 +1,6 @@
 [build-system]
-requires = ["hatchling>=1.26"]
-build-backend = "hatchling.build"
+requires = ["uv_build==0.13.4"]
+build-backend = "uv_build"
 
 [project]
 name = "videobench-workbench"
@@ -38,7 +38,8 @@ dev = [
   "pre-commit>=4.0",
   "pytest>=8.3",
   "pytest-cov>=6.0",
-  "ruff>=0.9",
+  "ruff==0.17.1",
+  "ty==0.0.90",
   "types-PyYAML>=6.0",
 ]
 
@@ -50,8 +51,12 @@ Homepage = "https://github.com/EffortlessMetrics/VideoBench"
 Repository = "https://github.com/EffortlessMetrics/VideoBench"
 Issues = "https://github.com/EffortlessMetrics/VideoBench/issues"
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/videobench"]
+[tool.uv]
+required-version = "==0.13.4"
+
+[tool.uv.build-backend]
+module-name = "videobench"
+source-include = ["tests/**", "scripts/**", "contracts/**", "docs/**", "examples/**", "AGENTS.md", "ARCHITECTURE.md", "CONTRIBUTING.md", "CHANGELOG.md", "NOTICE", "CITATION.cff"]
 
 [tool.pytest.ini_options]
 addopts = "-ra --strict-config --strict-markers"
@@ -87,3 +92,9 @@ warn_unused_ignores = true
 [[tool.mypy.overrides]]
 module = "yaml"
 ignore_missing_imports = true
+
+[tool.ruff.lint.per-file-ignores]
+# Preserve the existing str(Enum) API, pinned by test_enum_rendering.py.
+# Remove these two exceptions only with an intentional enum-rendering API migration.
+"src/videobench/contracts.py" = ["UP042"]
+"src/videobench/types.py" = ["UP042"]

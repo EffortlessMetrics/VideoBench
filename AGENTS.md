@@ -70,15 +70,16 @@ Prefer a module inside an existing package until an independent protocol or info
 During focused work:
 
 ```bash
-python -m pytest tests/path_or_test.py
-python -m ruff check src tests
-python -m mypy src/videobench
+uv run --locked --no-sync pytest tests/path_or_test.py
+uv run --locked --no-sync ruff check src tests
+uv run --locked --no-sync ty check --error-on-warning src/videobench tests scripts
+uv run --locked --no-sync mypy src/videobench
 ```
 
 Before integration:
 
 ```bash
-python scripts/check.py
+uv run --locked --no-sync python scripts/check.py
 ```
 
 Do not lower a gate merely because new boundary code reduced coverage. Exercise the boundary or explicitly justify exclusion.

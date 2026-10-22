@@ -51,12 +51,8 @@ Economics is an analysis layer across candidate instruments. It is not a creativ
 Python 3.11 or newer is required.
 
 ```bash
-python -m venv .venv
-# Windows PowerShell: .venv\Scripts\Activate.ps1
-# macOS/Linux: source .venv/bin/activate
-python -m pip install -e ".[dev]"
-
-videobench demo --root . --out .videobench/demo
+uv sync --locked --extra dev
+uv run --locked --no-sync videobench demo --root . --out .videobench/demo
 ```
 
 The demo:
@@ -81,7 +77,7 @@ instrument valid mock-good accepted; mock-bad rejected
 Run the full verification chain:
 
 ```bash
-python scripts/check.py
+uv run --locked --no-sync python scripts/check.py
 ```
 
 ## Real run shape
