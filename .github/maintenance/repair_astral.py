@@ -22,7 +22,7 @@ Path('tests/test_enum_rendering.py').write_text('from enum import Enum\nimport j
 edit("tomllib.loads(Path('pyproject.toml').read_text())", repairs + "\ntomllib.loads(Path('pyproject.toml').read_text())")
 edit("    'README.md': '4c475fdd8f619f9a640f71ffc168f80b6421ebe6',", "    'README.md': '4c475fdd8f619f9a640f71ffc168f80b6421ebe6',\n    'src/videobench/runner.py': 'bfc314c987e4cd83cbfd4a6cac2f309c7b9cb0d6',\n    'src/videobench/verifier.py': '5aac12eb63c7cd00f2c6a6f88684b87e890831d8',\n    'tests/test_judge.py': '64dc0e755f1f01b0cd26603e7ec3fba54072fd36',")
 edit("Path('.github/maintenance/prepare_astral.py').unlink()", "Path('.github/maintenance/prepare_astral.py').unlink()\nPath('.github/maintenance/repair_astral.py').unlink()")
-edit('    paths = [p for root', "    ok = run('reviewed-lint-repairs', ['uv', 'run', '--no-sync', 'ruff', 'check', '--select', 'I,SIM114', '--fix', '.']) and ok\n    paths = [p for root")
+edit('    paths = [p for root', "    ok = run('reviewed-lint-repairs', ['uv', 'run', '--no-sync', 'ruff', 'check', '--select', 'I,SIM114,RUF021', '--fix', '.']) and ok\n    paths = [p for root")
 edit("['uv', 'build', '--locked', '--out-dir'", "['uv', 'build', '--out-dir'")
 edit("    subprocess.run(['git', 'add', '--intent-to-add', 'uv.lock'], check=True)", "    subprocess.run(['git', 'add', '--intent-to-add', 'uv.lock', 'tests/test_enum_rendering.py'], check=True)")
 compile(s, str(p), 'exec')
