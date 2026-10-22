@@ -39,9 +39,7 @@ def test_validate_compile_and_schema_commands(example_root: Path, tmp_path: Path
 
 def test_demo_command(repo_root: Path, tmp_path: Path) -> None:
     output = tmp_path / "demo"
-    result = runner.invoke(
-        app, ["demo", "--root", str(repo_root), "--out", str(output)]
-    )
+    result = runner.invoke(app, ["demo", "--root", str(repo_root), "--out", str(output)])
     assert result.exit_code == 0, result.stdout
     assert "instrument valid" in result.stdout
     assert (output / "score-good.json").is_file()
@@ -50,9 +48,12 @@ def test_demo_command(repo_root: Path, tmp_path: Path) -> None:
 
 def test_cli_evidence_workflow(example_root: Path, tmp_path: Path) -> None:
     compiled = tmp_path / "compiled"
-    assert runner.invoke(
-        app, ["compile", str(example_root / "task.yaml"), "--out", str(compiled)]
-    ).exit_code == 0
+    assert (
+        runner.invoke(
+            app, ["compile", str(example_root / "task.yaml"), "--out", str(compiled)]
+        ).exit_code
+        == 0
+    )
 
     condition = tmp_path / "run-condition.json"
     condition.write_text(
@@ -202,9 +203,12 @@ def test_cli_evidence_workflow(example_root: Path, tmp_path: Path) -> None:
 
 def test_run_command_cli(example_root: Path, tmp_path: Path) -> None:
     compiled = tmp_path / "compiled"
-    assert runner.invoke(
-        app, ["compile", str(example_root / "task.yaml"), "--out", str(compiled)]
-    ).exit_code == 0
+    assert (
+        runner.invoke(
+            app, ["compile", str(example_root / "task.yaml"), "--out", str(compiled)]
+        ).exit_code
+        == 0
+    )
     condition = tmp_path / "condition.json"
     condition.write_text(
         json.dumps({"attempt_id": "cli-command-1", "clean_state_id": "clean"}),
@@ -260,7 +264,5 @@ def test_media_and_resolve_receipt_commands(
         "capture_resolve_snapshot",
         lambda: {"resolve": {"version": "test"}, "project": {}, "unknowns": []},
     )
-    snapshot = runner.invoke(
-        app, ["resolve-snapshot", "--out", str(tmp_path / "resolve.json")]
-    )
+    snapshot = runner.invoke(app, ["resolve-snapshot", "--out", str(tmp_path / "resolve.json")])
     assert snapshot.exit_code == 0, snapshot.stdout

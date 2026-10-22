@@ -75,9 +75,7 @@ def test_command_runner_records_timeout(example_root: Path, tmp_path: Path) -> N
     assert result.outcome == OutcomeStatus.TIMED_OUT
 
 
-def test_command_runner_rejects_stale_output_directory(
-    example_root: Path, tmp_path: Path
-) -> None:
+def test_command_runner_rejects_stale_output_directory(example_root: Path, tmp_path: Path) -> None:
     compiled = compile_task_file(example_root / "task.yaml", tmp_path / "compiled")
     execution = payload_as(compiled.execution_pack, ExecutionPack, expected_kind="execution_pack")
     stack = load_model(example_root / "stacks/mock-good.yaml", RunStack)
@@ -96,9 +94,7 @@ def test_command_runner_rejects_stale_output_directory(
         )
 
 
-def test_command_runner_rejects_stale_usage_receipt(
-    example_root: Path, tmp_path: Path
-) -> None:
+def test_command_runner_rejects_stale_usage_receipt(example_root: Path, tmp_path: Path) -> None:
     compiled = compile_task_file(example_root / "task.yaml", tmp_path / "compiled")
     execution = payload_as(compiled.execution_pack, ExecutionPack, expected_kind="execution_pack")
     stack = load_model(example_root / "stacks/mock-good.yaml", RunStack)
@@ -136,9 +132,7 @@ def test_command_runner_rejects_reserved_environment_override(
         )
 
 
-def test_command_runner_records_invalid_usage_receipt(
-    example_root: Path, tmp_path: Path
-) -> None:
+def test_command_runner_records_invalid_usage_receipt(example_root: Path, tmp_path: Path) -> None:
     compiled = compile_task_file(example_root / "task.yaml", tmp_path / "compiled")
     execution = payload_as(compiled.execution_pack, ExecutionPack, expected_kind="execution_pack")
     stack = load_model(example_root / "stacks/mock-good.yaml", RunStack)

@@ -633,9 +633,9 @@ class QualificationCase(StrictModel):
     case_id: str
     criterion_id: str
     expected_verdict: JudgmentVerdict
-    expected_score_relation: Literal[
-        "higher", "lower", "equal", "not_applicable"
-    ] = "not_applicable"
+    expected_score_relation: Literal["higher", "lower", "equal", "not_applicable"] = (
+        "not_applicable"
+    )
     pair_id: str | None = None
     injection_sentinel: bool = False
 

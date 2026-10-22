@@ -62,9 +62,7 @@ def validate_task_source(task: TaskSource, base_dir: Path | None = None) -> None
         "mutant IDs": _duplicates(item.mutant_id for item in task.mutants),
     }
     errors = [
-        f"Duplicate {label}: {sorted(values)}"
-        for label, values in duplicate_sets.items()
-        if values
+        f"Duplicate {label}: {sorted(values)}" for label, values in duplicate_sets.items() if values
     ]
 
     for asset in task.assets:

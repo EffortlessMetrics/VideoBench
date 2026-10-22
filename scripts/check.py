@@ -52,6 +52,17 @@ def main() -> None:
     check_schema_drift()
     run(sys.executable, "-m", "ruff", "format", "--check", ".")
     run(sys.executable, "-m", "ruff", "check", ".")
+    run(
+        str(Path(sys.executable).with_name("ty.exe" if os.name == "nt" else "ty")),
+        "check",
+        "--error-on-warning",
+        "--python-version",
+        "3.11",
+        "src/videobench",
+        "tests",
+        "scripts",
+    )
+    # Retain strict mypy until its additional obligations have a proven replacement.
     run(sys.executable, "-m", "mypy", "src/videobench")
     run(
         sys.executable,

@@ -13,6 +13,7 @@ from videobench.contracts import (
 )
 from videobench.io import load_model, payload_as
 from videobench.judge import qualify_judge, validate_judge_stack
+from videobench.types import JudgmentVerdict
 
 
 def test_qualification_authorizes_only_demonstrated_criteria(example_root: Path) -> None:
@@ -28,14 +29,12 @@ def test_qualification_authorizes_only_demonstrated_criteria(example_root: Path)
 def test_failed_qualification_grants_no_eligibility(example_root: Path) -> None:
     pack = load_model(example_root / "policies/judge-qualification-pack.yaml", QualificationPack)
     run = load_model(example_root / "policies/judge-qualification-run.yaml", QualificationRun)
-    run.observations[0].verdict = "reject"
+    run.observations[0].verdict = JudgmentVerdict.REJECT
     receipt = qualify_judge(qualification_pack=pack, qualification_run=run)
     assert receipt.eligible_criteria == []
 
 
-def test_judge_transform_must_support_required_evidence(
-    example_root: Path, tmp_path: Path
-) -> None:
+def test_judge_transform_must_support_required_evidence(example_root: Path, tmp_path: Path) -> None:
     paths = compile_task_file(example_root / "task.yaml", tmp_path)
     pack = payload_as(paths.judge_pack, JudgePack, expected_kind="judge_pack")
     stack = load_model(example_root / "policies/judge-stack.yaml", JudgeStack)

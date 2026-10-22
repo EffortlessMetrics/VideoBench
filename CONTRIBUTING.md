@@ -11,10 +11,8 @@ Task and scoring changes carry a higher evidence burden than ordinary code chang
 ## Development setup
 
 ```bash
-python -m venv .venv
-# activate the environment
-python -m pip install -e ".[dev]"
-python scripts/check.py
+uv sync --locked --extra dev
+uv run --locked --no-sync python scripts/check.py
 ```
 
 ## Pull requests
@@ -42,7 +40,9 @@ After changing Pydantic protocol models:
 videobench export-schemas --out contracts/schemas
 ```
 
-`python scripts/check.py` rejects schema drift.
+`uv run --locked --no-sync python scripts/check.py` rejects schema drift.
+
+The manifest pins uv, Ruff, and ty; `uv.lock` owns resolved dependencies. Update the lock with `uv lock`, then verify `uv lock --check`. The strict mypy check remains a blocking companion until its additional obligations have a proven replacement; ty is required, not advisory.
 
 ## Commit style
 
