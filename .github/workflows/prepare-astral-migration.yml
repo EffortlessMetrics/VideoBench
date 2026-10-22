@@ -4,8 +4,6 @@ on:
   push:
     branches: [modernize/astral-20261021]
     paths:
-      - .github/maintenance/prepare_astral.py
-      - .github/maintenance/repair_astral.py
       - .github/workflows/prepare-astral-migration.yml
 
 permissions: {}
@@ -91,7 +89,7 @@ jobs:
           assert removed.issubset(names)
           subprocess.run(['git', 'diff', '--cached', '--check'], check=True)
           PY
-      - name: Retain on the dedicated branch without rewriting history
+      - name: Retain qualified non-workflow source without broadening token authority
         env:
           GH_TOKEN: ${{ github.token }}
           EXPECTED_HEAD: ${{ github.sha }}
@@ -101,6 +99,13 @@ jobs:
           gh auth setup-git
           observed=$(git ls-remote --heads origin "refs/heads/$branch" | cut -f1)
           test "$observed" = "$EXPECTED_HEAD"
+          git restore --staged --worktree --source=HEAD -- \
+            .github/workflows/ci.yml \
+            .github/workflows/prepare-astral-migration.yml
+          git diff --cached --check
+          test -f uv.lock
+          test ! -e .github/maintenance/prepare_astral.py
+          test ! -e .github/maintenance/repair_astral.py
           git config user.name EffortlessSteven
           git config user.email 15812269+EffortlessSteven@users.noreply.github.com
           git commit -m 'build(python): adopt locked Astral environment and required ty checks'
