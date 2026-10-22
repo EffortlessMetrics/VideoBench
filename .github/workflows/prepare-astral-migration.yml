@@ -1,8 +1,8 @@
 name: Prepare Astral migration (one-shot)
 
 on:
-  push:
-    branches: [modernize/astral-20261021]
+  pull_request:
+    branches: [main]
     paths:
       - .github/workflows/prepare-astral-migration.yml
 
@@ -10,17 +10,19 @@ permissions: {}
 
 jobs:
   prepare:
-    if: github.repository == 'EffortlessMetrics/VideoBench'
+    if: github.repository == 'EffortlessMetrics/VideoBench' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
       contents: read
     env:
+      GITHUB_SHA: ${{ github.event.pull_request.head.sha }}
       UV_PYTHON: '3.11.16'
     steps:
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955
         with:
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha }}
       - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e
         with:
           version: '0.13.4'
@@ -48,6 +50,7 @@ jobs:
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955
         with:
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha }}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: astral-migration-${{ github.run_id }}-${{ github.run_attempt }}
@@ -55,6 +58,7 @@ jobs:
       - name: Validate and stage only the qualified patch
         env:
           ARTIFACT_ROOT: ${{ runner.temp }}/astral-input
+          CANDIDATE_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           python3 - <<'PY'
           import ast, hashlib, json, os, subprocess
@@ -63,7 +67,7 @@ jobs:
           receipt = json.loads((root / 'receipt.json').read_text())
           patch = (root / 'candidate.patch').read_bytes()
           assert receipt['qualified'] is True
-          assert receipt['input_head'] == os.environ['GITHUB_SHA']
+          assert receipt['input_head'] == os.environ['CANDIDATE_SHA']
           assert 0 < len(patch) <= 16 * 1024 * 1024
           assert hashlib.sha256(patch).hexdigest() == receipt['patch_sha256']
           subprocess.run(['git', 'apply', '--index', '--whitespace=error', str(root / 'candidate.patch')], check=True)
@@ -92,12 +96,12 @@ jobs:
       - name: Retain qualified non-workflow source without broadening token authority
         env:
           GH_TOKEN: ${{ github.token }}
-          EXPECTED_HEAD: ${{ github.sha }}
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
         run: |
           set -euo pipefail
-          branch=modernize/astral-20261021
           gh auth setup-git
-          observed=$(git ls-remote --heads origin "refs/heads/$branch" | cut -f1)
+          observed=$(git ls-remote --heads origin "refs/heads/$HEAD_BRANCH" | cut -f1)
           test "$observed" = "$EXPECTED_HEAD"
           git restore --staged --worktree --source=HEAD -- \
             .github/workflows/ci.yml \
@@ -109,4 +113,4 @@ jobs:
           git config user.name EffortlessSteven
           git config user.email 15812269+EffortlessSteven@users.noreply.github.com
           git commit -m 'build(python): adopt locked Astral environment and required ty checks'
-          git push origin "HEAD:refs/heads/$branch"
+          git push origin "HEAD:refs/heads/$HEAD_BRANCH"
