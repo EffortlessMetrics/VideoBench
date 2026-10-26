@@ -25,7 +25,7 @@ jobs:
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955
         with:
           persist-credentials: false
-      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e
         with:
           version: "0.13.4"
           enable-cache: false
