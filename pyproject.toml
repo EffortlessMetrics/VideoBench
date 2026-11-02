@@ -39,7 +39,7 @@ dev = [
   "pytest>=8.3",
   "pytest-cov>=6.0",
   "ruff==0.17.1",
-  "ty==0.0.90",
+  "ty==0.0.95",
   "types-PyYAML>=6.0",
 ]
 
